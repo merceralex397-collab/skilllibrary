@@ -4,9 +4,9 @@ This file tracks an incremental, one-skill-at-a-time review of the library so th
 
 Review criteria for each entry are grounded in:
 
-- `/home/runner/work/skilllibrary/skilllibrary/README.md`
-- `/home/runner/work/skilllibrary/skilllibrary/taskfiles/ideal-agent-skills-architecture-spec-v2-templates.md`
-- `/home/runner/work/skilllibrary/skilllibrary/skill-improver/skill-improver/SKILL.md`
+- `./README.md`
+- `./taskfiles/ideal-agent-skills-architecture-spec-v2-templates.md`
+- `./skill-improver/skill-improver/SKILL.md`
 
 Reviewed so far: 1 skill
 
@@ -24,7 +24,7 @@ None yet. No merge recommendation should be recorded until the overlapping skill
 
 ## Improve
 
-### `/home/runner/work/skilllibrary/skilllibrary/01-package-scaffolding/spec-pack-normalizer/SKILL.md`
+### `./01-package-scaffolding/spec-pack-normalizer/SKILL.md`
 
 **Recommendation:** Improve
 
