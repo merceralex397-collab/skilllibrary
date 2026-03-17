@@ -15,33 +15,167 @@ metadata:
 ---
 
 # Purpose
-Synthesize project-specific skills from the brief, stack profile, and domain signals — replacing generic placeholders with skills that reference actual project files, libraries, and patterns.
+Generates project-local skills populated with actual project data, stack-specific conventions, and domain-specific procedures—not generic placeholders. This skill reads the project's brief, stack profile, and codebase patterns, then produces skills that reference real files, real commands, and real constraints specific to this project.
 
 # When to use this skill
 Use when:
-- A new project has been scaffolded with generic skill stubs that need to become project-aware
-- A project's stack has changed significantly and its skills need to be updated
-- An agent keeps producing generic code because it lacks project-specific guidance
-- The user says "the skills don't know anything about this project" or "make the skills specific to X"
+- After initial scaffolding, to customize generic skill templates
+- When project conventions have been established but skills don't reflect them
+- Adding a new domain-specific skill (e.g., "deployment", "database-migrations")
+- Skills feel generic and don't help agents work effectively
 
 Do NOT use when:
-- The project already has well-populated project-local skills
-- Generic community skills are sufficient for the task at hand
+- The project has no established patterns yet (scaffold first)
+- Updating a single skill (edit directly)
+- The skill is universal, not project-specific (belongs in skill library)
 
 # Operating procedure
-1. **Load project context**: read AGENTS.md, the canonical brief, and any existing `.opencode/skills/`
-2. **Run stack-profile-detector**: confirm language, framework, major libraries, test runner, lint config
-3. **For each skill category**, generate a project-specific version:
-   - **stack-standards**: replace generic rules with actual config file paths, library names, version constraints
-   - **error-handling**: replace generic patterns with actual exception classes and logging library used
-   - **testing**: replace generic advice with actual test runner commands, fixture locations, coverage thresholds
-   - **api-schema**: replace generic OpenAPI boilerplate with actual endpoint list and schema types
-4. **Add project-specific trigger phrases**: each skill must include phrases the agent will actually say in this project (e.g., "use the `UserRepository` class", not "use your data layer")
-5. **Reference actual files**: every operating procedure step must cite a real file path where applicable
-6. **Write skill files** to `.opencode/skills/` (project-local, overrides global skills)
+
+## 1. Gather project signals
+Extract concrete facts from:
+```bash
+# Stack
+cat docs/STACK-PROFILE.md
+cat package.json | jq '{name, scripts, dependencies}'
+cat Cargo.toml | head -30
+
+# Structure
+tree -L 2 -I 'node_modules|dist|target'
+
+# Patterns (sample real code)
+head -50 src/index.* src/main.* 2>/dev/null
+ls src/**/*.test.* tests/**/* 2>/dev/null | head -10
+
+# Commands that exist
+grep -E "^\s+\"[a-z]+\":" package.json | head -20  # npm scripts
+```
+
+## 2. Identify skill gaps
+Compare existing `.opencode/skills/` to project needs:
+```bash
+ls .opencode/skills/ 2>/dev/null
+```
+
+Common project-specific skills needed:
+- `stack-standards` — filled with actual stack choices
+- `testing-patterns` — project's actual test conventions
+- `deployment` — project's actual deploy process
+- `database-ops` — project's actual DB patterns
+- `api-conventions` — project's actual API patterns
+
+## 3. Generate skill with real data
+For each skill, replace placeholders with actuals:
+
+### Example: Filling stack-standards
+```yaml
+# BEFORE (generic)
+primary_language: [TypeScript | Python | Rust | Go | ...]
+test_framework: [vitest | pytest | cargo test | go test | ...]
+
+# AFTER (project-specific)
+primary_language: TypeScript
+runtime: Node.js 20.x
+test_framework: vitest
+test_command: npm test
+formatter: prettier (config: .prettierrc)
+linter: eslint (config: eslint.config.js)
+```
+
+### Example: Filling testing-patterns
+```markdown
+# Testing Patterns (Project-Specific)
+
+## Test Location
+Tests live in `src/**/*.test.ts` alongside source files.
+
+## Test Framework
+- Framework: Vitest
+- Run all: `npm test`
+- Run single: `npm test -- auth.test.ts`
+- Watch mode: `npm test -- --watch`
+
+## Patterns Used in This Project
+- Use `describe`/`it` blocks (see `src/auth/auth.test.ts`)
+- Mock external services with `vi.mock()` (see `src/api/api.test.ts`)
+- Use factories in `tests/factories/` for test data
+```
+
+## 4. Reference real files
+Every skill should cite actual project files:
+```markdown
+## Examples
+- Authentication: see `src/auth/auth.service.ts`
+- API route: see `src/routes/users.ts`
+- Database model: see `src/models/User.ts`
+```
+
+## 5. Include real commands
+```markdown
+## Commands
+```bash
+# Validate before commit
+npm run lint && npm run typecheck && npm test
+
+# Start development
+npm run dev
+
+# Deploy
+npm run build && npm run deploy
+```
+```
+
+## 6. Add domain-specific knowledge
+If the project has domain-specific concepts:
+```markdown
+## Domain Glossary
+- **Replay**: A StarCraft 2 game recording file (.SC2Replay)
+- **Fingerprint**: Unique identifier for a player's playstyle
+- **Build Order**: Sequence of units/structures a player creates
+
+## Domain Rules
+- Replay files are immutable once parsed
+- Fingerprints are computed, never manually assigned
+- Build orders are ordered lists, not sets
+```
+
+## 7. Validate generated skills
+For each skill:
+- [ ] All referenced files exist
+- [ ] All commands are valid
+- [ ] No placeholder text remains (`[...]`, `TODO`, etc.)
+- [ ] Skill is specific enough to be useful
+
+## 8. Place skills correctly
+```bash
+mkdir -p .opencode/skills
+# Write each skill
+cat > .opencode/skills/testing-patterns.md << 'EOF'
+[skill content]
+EOF
+```
 
 # Output defaults
-Updated skill files in `.opencode/skills/`. Each skill must contain at least one project-specific file reference.
+Skills written to `.opencode/skills/` with:
+- Project name in metadata
+- Real file references
+- Real commands
+- No placeholder text
+
+Example output:
+```
+.opencode/skills/
+├── stack-standards.md      # Filled with actual stack
+├── testing-patterns.md     # Project's actual test patterns
+├── api-conventions.md      # Project's actual API style
+└── deployment.md           # Project's actual deploy process
+```
+
+# References
+- Skills are instructions for agents, not documentation for humans
+- Project-specific skills >> generic skills for reducing drift
 
 # Failure handling
-If the project is too new to have real patterns yet, write skills with `<!-- TODO: update with real patterns after first implementation sprint -->` markers and schedule a follow-up.
+- **No stack profile exists**: Run stack-profile-detector first
+- **Referenced file doesn't exist**: Remove reference or note "planned: [file]"
+- **Command doesn't exist**: Check package.json/Makefile; if truly missing, note "TODO: add [command]"
+- **Domain too complex to summarize**: Create multiple domain skills (domain-glossary, domain-rules, domain-workflows)

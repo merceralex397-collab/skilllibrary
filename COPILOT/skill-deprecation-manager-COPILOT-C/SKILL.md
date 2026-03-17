@@ -15,39 +15,82 @@ metadata:
 ---
 
 # Purpose
-Deprecates or retires a specific skill safely: updating its state, adding deprecation notices, redirecting any references to it, and preserving the skill's content for historical record without leaving it active in the library.
+Safely deprecates a specific skill: updates state, adds notices, redirects references, preserves content for history without leaving it active. Handles migration path, replacement pointer, and grace period.
 
 # When to use this skill
 Use when:
-- The user says "deprecate this skill", "retire this skill", or "this skill is being replaced by X"
-- A skill catalog curation identified a skill for retirement
-- A skill has been superseded by a new version or merged into another skill
-- A skill is causing harm (misfiring, producing wrong outputs) and must be pulled immediately
+- User says "deprecate this skill", "retire this", "this is replaced by X"
+- Catalog curation identified skill for retirement
+- Skill superseded by new version or merged
+- Skill causing harm (misfiring, wrong outputs)—pull immediately
 
 Do NOT use when:
-- The skill needs to be improved, not retired (use `skill-refinement`)
+- Skill needs improvement, not retirement (use `skill-refinement`)
 - Multiple skills need lifecycle management (use `skill-lifecycle-management`)
-- The skill is in a repo that does not support deprecation metadata — delete it directly
+- Repo doesn't support deprecation—just delete
 
 # Operating procedure
-1. **Confirm the deprecation decision**: State the reason. One of: superseded by [skill name], merged into [skill name], unused for [N cycles], consistently failing evaluation, or causing harm
-2. **Find all references to this skill**: Search for the skill name in: AGENTS.md, other SKILL.md files (in "Do NOT use when" sections or references), skills-lock.json, documentation, command files
-3. **Update each reference**: Replace references to the deprecated skill with either the replacement skill name or a note that no replacement exists
-4. **Update the skill's frontmatter**:
-   - Set `metadata.maturity` to `deprecated`
-   - Add a `deprecated_by` field pointing to the replacement (or "none")
-   - Add a `deprecated_reason` field with one sentence
-5. **Add a deprecation notice to the SKILL.md body** (top of the file, before Purpose):
+1. **Confirm deprecation decision**:
+   - Reason: superseded by [X], merged into [Y], unused [N cycles], failing evaluation, causing harm
+2. **Find all references**:
+   - Search in: AGENTS.md, other SKILL.md ("Do NOT use when"), skills-lock.json, docs, commands
+3. **Update each reference**:
+   - Replace with replacement skill or note "no replacement"
+4. **Update frontmatter**:
+   ```yaml
+   metadata:
+     maturity: deprecated
+     deprecated_by: replacement-skill  # or "none"
+     deprecated_reason: "Superseded by newer version"
    ```
-   > ⚠️ DEPRECATED: This skill is deprecated as of [date]. Use [replacement skill] instead.
-   > Reason: [one sentence]. This file is kept for reference only.
+5. **Add deprecation notice** (top of SKILL.md):
+   ```markdown
+   > ⚠️ DEPRECATED as of [date]. Use [replacement] instead.
+   > Reason: [one sentence]. Kept for reference only.
    ```
-6. **Move to archive** (if the library has an archive): Move the skill folder to `ARCHIVE/SKILLNAME/` or equivalent. Do not delete — preserve for reference
-7. **Update skills-lock.json** (if applicable): Mark the skill as `deprecated` in the lock file so installers do not use it
-8. **Update the library index**: Remove from the active catalog, add to a "Deprecated" section if one exists
+6. **Move to archive** (if exists):
+   - Move to `ARCHIVE/skill-name/`
+   - Do NOT delete—preserve for reference
+7. **Update skills-lock.json**:
+   - Mark `deprecated: true`
+8. **Update library index**:
+   - Remove from active catalog
+   - Add to "Deprecated" section
 
 # Output defaults
-Updated SKILL.md with deprecation notice, a **Reference Update Report** (list of files updated and how), and a confirmation that the skill is in the correct archive location.
+```
+## Deprecation: [skill-name]
+
+**Reason**: [superseded | merged | unused | failing | harmful]
+**Replacement**: [skill] or "none"
+**Date**: [YYYY-MM-DD]
+
+### References Updated
+| File | Line | Change |
+|------|------|--------|
+| AGENTS.md | 45 | skill-old → skill-new |
+| other-skill.md | 28 | Updated "Do NOT use when" |
+
+### Frontmatter Updated
+- maturity: deprecated
+- deprecated_by: [X]
+
+### Archive Location
+ARCHIVE/skill-name/
+
+### Verification
+- [x] References updated
+- [x] Notice added
+- [x] Archived
+- [x] Index updated
+```
+
+# References
+- Skill being deprecated
+- Replacement skill if exists
+- Library index
 
 # Failure handling
-If active workflows depend on the skill and no replacement exists, do not deprecate immediately. Document the dependency and the gap it creates, then recommend using `skill-authoring` to create a replacement first.
+- **Active dependencies, no replacement**: Don't deprecate—document gap, recommend `skill-authoring` for replacement first
+- **Replacement incomplete**: Create migration path, note limitations
+- **Urgent harm**: Deprecate immediately, create follow-up for replacement

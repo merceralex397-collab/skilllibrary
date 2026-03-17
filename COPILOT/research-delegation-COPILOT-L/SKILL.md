@@ -15,37 +15,149 @@ metadata:
 ---
 
 # Purpose
-Delegate read-only research tasks to sub-agents with narrow, explicit scopes, then consolidate findings into durable artifacts without letting research bleed into mutation work.
+Delegates research tasks to sub-agents with precise scope definitions, explicit output contracts, and synthesis instructions. Keeps information gathering cleanly separated from code mutation—research agents read and report, implementation agents act on findings. Prevents the common failure mode of "research" that actually makes changes.
 
 # When to use this skill
 Use when:
-- A task requires gathering information before making changes (e.g., "research how library X handles Y")
-- Multiple independent research questions can be parallelized across sub-agents
-- An agent is about to mix research and editing in the same pass (a drift risk)
-- The user says "find out how X works", "look up Y", or "investigate Z before we change anything"
+- Need to understand a codebase area before making changes
+- Gathering evidence from multiple sources (files, docs, web)
+- Preparing a decision with supporting analysis
+- The research could be parallelized across multiple sub-agents
 
 Do NOT use when:
-- The research is a single targeted grep or file read (do it directly)
-- The task is pure execution with no open questions
+- The question can be answered by reading one file (just read it)
+- You need to make changes during investigation (that's implementation)
+- The "research" is actually prototyping or experimentation
 
 # Operating procedure
-1. **Define the research scope**: write a one-sentence research question with explicit success criteria (e.g., "Find all places where AuthService is instantiated; success = complete list of call sites")
-2. **Scope the blast radius**: specify which directories or files are in scope; explicitly name what is out of scope
-3. **Assign to a read-only sub-agent**: the sub-agent may only read, grep, and summarize — no writes, no edits
-4. **For parallel questions**: launch separate sub-agents per question simultaneously; do not serialize unnecessarily
-5. **Receive findings**: each sub-agent returns a structured findings artifact:
-   ```
-   QUESTION: <question>
-   ANSWER: <direct answer>
-   EVIDENCE: <file:line references>
-   CONFIDENCE: high / medium / low
-   GAPS: <what could not be determined>
-   ```
-6. **Consolidate into a research artifact** (`docs/research/TOPIC-DATE.md`) before starting mutation work
-7. **Hand off to execution**: attach the research artifact to the relevant ticket before any code changes begin
+
+## 1. Define research scope precisely
+A good research delegation includes:
+```markdown
+## Research Task: [Descriptive name]
+
+### Question
+[Single, specific question to answer]
+
+### Scope
+- Files/directories to examine: [explicit list or pattern]
+- External sources (if any): [URLs, APIs]
+- Time/token budget: [limit]
+
+### Output Contract
+Return findings in this format:
+- Answer: [direct answer to the question]
+- Evidence: [file:line citations]
+- Confidence: [high/medium/low with rationale]
+- Gaps: [what couldn't be determined]
+
+### Constraints
+- READ ONLY: Do not modify any files
+- Do not execute code that has side effects
+- Do not make network requests unless explicitly listed
+```
+
+## 2. Parallelize independent research
+If multiple questions are independent, delegate in parallel:
+```
+Research Task A: How does authentication work?
+  Scope: src/auth/
+  
+Research Task B: What database schema exists?
+  Scope: src/models/, migrations/
+  
+Research Task C: What are the API endpoints?
+  Scope: src/routes/, docs/api.md
+```
+
+## 3. Enforce read-only constraint
+Research agents must not:
+- Create files (except findings artifact)
+- Modify existing files
+- Run commands that mutate state
+- Make commits
+
+Allowed actions:
+- `cat`, `grep`, `find`, `tree`
+- `git log`, `git show`, `git blame`
+- Read-only API calls
+- Web fetches for documentation
+
+## 4. Require evidence-backed findings
+Every claim must have a citation:
+```markdown
+## Finding: User authentication uses JWT
+
+**Evidence:**
+- `src/auth/jwt.ts:15` - JwtStrategy class definition
+- `src/auth/guards.ts:8` - @UseGuards(JwtAuthGuard) decorator
+- `package.json:12` - "@nestjs/jwt": "^10.0.0" dependency
+
+**Confidence:** High - multiple corroborating sources
+```
+
+## 5. Synthesize delegated research
+After research tasks complete, synthesize:
+```markdown
+## Research Synthesis: [Topic]
+
+### Summary
+[Combined findings in 2-3 sentences]
+
+### Key Findings
+1. [Finding from Task A]
+2. [Finding from Task B]
+3. [Finding from Task C]
+
+### Conflicts/Uncertainties
+- [Any contradictory findings]
+- [Gaps that remain]
+
+### Implications for Implementation
+- [How findings affect next steps]
+```
+
+## 6. Persist findings as artifacts
+Save research results for future reference:
+```bash
+mkdir -p docs/research
+cat > docs/research/[topic]-[date].md << 'EOF'
+# Research: [Topic]
+Date: [ISO date]
+Researcher: [agent-id]
+
+[Synthesis content]
+EOF
+```
 
 # Output defaults
-Research artifact file + consolidated summary. Sub-agents must not modify files.
+```markdown
+# Research Findings: [Topic]
+
+## Question
+[Original question]
+
+## Answer
+[Direct answer, 1-3 sentences]
+
+## Evidence
+| Claim | Source | Confidence |
+|-------|--------|------------|
+| [claim] | [file:line] | high/medium/low |
+
+## Gaps
+- [What couldn't be determined]
+
+## Raw Findings
+[Detailed findings from each research task]
+```
+
+# References
+- Read-only delegation prevents accidental mutations during investigation
+- Evidence-based findings enable verification and reduce hallucination
 
 # Failure handling
-If a sub-agent cannot answer a question with high confidence, escalate as a gap rather than guessing. Record gaps explicitly — a known unknown is better than a wrong answer.
+- **Scope too broad**: If research would require reading >50 files, narrow scope or break into sub-tasks
+- **No evidence found**: Report "No evidence found in specified scope" rather than guessing
+- **Conflicting evidence**: Report both sources and the conflict, don't resolve silently
+- **Research agent made changes**: Revert immediately, flag as constraint violation, retry with stricter enforcement

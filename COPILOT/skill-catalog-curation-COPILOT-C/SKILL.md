@@ -15,37 +15,96 @@ metadata:
 ---
 
 # Purpose
-Reviews an entire skill library for duplicates, category mismatches, coverage gaps, and quality inconsistencies, then produces a curated catalog with a recommended set of actions to improve the library's coherence and discoverability.
+Reviews skill library as a whole: identifies duplicates/overlaps, enforces category consistency, assigns quality gates, marks deprecated skills, and ensures catalog remains navigable as it grows.
 
 # When to use this skill
 Use when:
-- The user says "curate the skill catalog", "clean up the skill library", or "what's wrong with this skill set?"
-- A library has grown past 20 skills and likely has accumulated overlap, gaps, and inconsistencies
-- A new category or domain has been added and existing skills need to be re-organised
-- Before publishing a skill library, to ensure it is coherent and defensible
+- User says "audit the library", "clean up skills", "organize catalog"
+- Library grown large enough that overlaps/inconsistencies emerge
+- Periodic maintenance (recommend: monthly for active libraries)
+- Before major release
+- After bulk import
 
 Do NOT use when:
-- The goal is to manage a single skill's lifecycle (use `skill-lifecycle-management`)
-- The goal is to remove one specific skill (use `skill-deprecation-manager`)
-- The library has fewer than 10 skills — curation overhead is not yet warranted
+- Working on single skill
+- Installing/packaging skills
+- Creating new skills (use `skill-authoring`)
+- Library small (<20) and well-organized
 
 # Operating procedure
-1. **Inventory the library**: List all skills with their name, category, description (first sentence), and maturity. Build a table or flat list
-2. **Detect duplicates and near-duplicates**: Compare skill descriptions for semantic overlap. Flag pairs where two skills appear to do the same thing. Check: do their "When to use" sections conflict or overlap significantly?
-3. **Detect category mismatches**: Is each skill in the most accurate category? Skills that span categories signal a splitting or reclassification need
-4. **Detect coverage gaps**: Are there common tasks in the library's domain that no skill covers? Look for tasks that users would naturally request but would find no skill for
-5. **Assess quality distribution**: Count how many skills are `stable`, `draft`, `deprecated`. Flag skills that have been in `draft` for more than one release cycle without progression
-6. **Generate curation actions** for each finding:
-   - **Merge**: Two skills should become one (name the survivor)
-   - **Split**: One skill is doing too much (name the two new skills)
-   - **Reclassify**: Move to a different category
-   - **Fill gap**: New skill needed for X
-   - **Retire**: Skill is superseded or unused (use `skill-deprecation-manager`)
-   - **Promote**: Skill is stable enough to advance from draft
-7. **Prioritise actions**: Merges and fills of high-traffic gaps first, cosmetic reclassifications last
+1. **Generate inventory**:
+   - List all skills: name, category, maturity, last modified
+   - Count per category
+   - Identify uncategorized/miscategorized
+2. **Detect duplicates/overlaps**:
+   - Compare descriptions for similarity
+   - Flag >70% overlap
+   - Flag same name, different paths
+   - Recommend: merge, differentiate, or keep
+3. **Audit category assignments**:
+   - List all categories
+   - Check each skill's category matches function
+   - Categories with 1-2 skills → consider merging
+   - Categories with >15 skills → consider splitting
+4. **Apply quality gates**:
+   - **Draft**: Missing evals, incomplete, new
+   - **Stable**: Has evals, complete, tested
+   - **Deprecated**: Superseded, has replacement
+   - Flag mismatched maturity
+5. **Check discoverability**:
+   - Descriptions clear and searchable?
+   - Trigger phrases present?
+   - Would user find when needed?
+6. **Mark deprecation candidates**:
+   - No usage (if metrics available)
+   - Superseded by better alternative
+   - For obsolete tools
+7. **Generate report**:
+   - Summary stats
+   - Action items by priority
+   - Recommendations
 
 # Output defaults
-A **Library Inventory** table, a **Findings** list grouped by type (duplicates, gaps, category issues, quality issues), and a **Curation Action Plan** ordered by priority.
+```
+## Catalog Curation Report
+
+### Summary
+- Total: 47 skills
+- Maturity: 12 draft, 30 stable, 5 deprecated
+- Categories: 8
+
+### Duplicates/Overlaps
+| A | B | Similarity | Action |
+|---|---|------------|--------|
+| api-testing | api-test | 85% | Merge |
+
+### Category Issues
+| Issue | Skills | Action |
+|-------|--------|--------|
+| Miscategorized | X | Move to Y |
+
+### Quality Violations
+| Skill | Current | Issue | Action |
+|-------|---------|-------|--------|
+| skill-a | stable | No evals | Demote |
+
+### Deprecation Candidates
+| Skill | Reason | Replacement |
+|-------|--------|-------------|
+| old-api | Deprecated | new-api |
+
+### Actions (Priority Order)
+1. [High] Merge duplicates
+2. [Medium] Add missing evals
+3. [Low] Reorganize categories
+```
+
+# References
+- Catalog index file
+- Individual SKILL.md files
 
 # Failure handling
-If the library structure is non-standard (no categories, no frontmatter), note what metadata is missing and provide a best-effort inventory based on directory names and SKILL.md content.
+- **Can't determine similarity**: Manual review for edge cases
+- **Conflicting categories**: Propose unified scheme
+- **No usage metrics**: Base on age + last modified
+- **Too many issues**: Prioritize by impact, create phases

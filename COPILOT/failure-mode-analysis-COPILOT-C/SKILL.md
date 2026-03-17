@@ -15,42 +15,82 @@ metadata:
 ---
 
 # Purpose
-Systematically enumerates how a system, workflow, or component can fail, rates each failure mode by severity and likelihood, and identifies controls that reduce each risk.
+Systematically enumerates how a system, workflow, or component can fail, rates each failure mode by severity and likelihood, and identifies controls that reduce each risk. This adapts FMEA (Failure Mode and Effects Analysis)—a reliability engineering technique from the 1950s—for software systems, agent workflows, and LLM-based applications.
 
 # When to use this skill
 Use when:
-- The user says "what are the failure modes?", "FMEA this", or "how could this break in production?"
-- A new system is about to be deployed and failure modes need to be catalogued before go-live
-- An orchestration system, agent, or MCP tool is being designed and its failure surface needs mapping
-- Post-incident: a system failed and all related failure modes need to be enumerated to prevent recurrence
+- The user says "what are the failure modes?", "FMEA this", "how could this break in production?", or "what could go wrong technically?"
+- A new system is about to be deployed and failure modes need cataloguing before go-live
+- An orchestration system, agent, MCP tool, or LLM pipeline is being designed
+- Post-incident: a system failed and all related failure modes need enumeration to prevent recurrence
+- Designing monitoring, alerting, or circuit breakers
 
 Do NOT use when:
-- The user wants to trace a specific past failure to its root cause (use `root-cause-analysis`)
+- The user wants to trace a specific past failure to root cause (use `root-cause-analysis`)
 - The user wants project-level risk analysis (use `premortem`)
-- The system has not yet been designed — there is nothing concrete to analyse
+- The system is conceptual—nothing concrete to analyze
+- The user wants to compare options (use `tradeoff-analysis`)
 
 # Operating procedure
-1. **Decompose the system into components**: List every functional unit — each service, agent, tool, integration, store, and human actor
-2. **For each component, enumerate failure modes**: Ask: "In what ways can this component fail to do its job?" Consider:
-   - Silent failure (appears to work, produces wrong output)
-   - Crash failure (component stops responding)
-   - Slow failure (latency degrades until unusable)
-   - Corrupt failure (data or state becomes inconsistent)
-   - Cascade failure (this component's failure causes downstream failures)
-   - Security failure (component is exploited or produces unauthorised output)
-3. **For each failure mode, assess**:
-   - **Likelihood**: How often does this failure mode typically occur? (Frequent / Occasional / Rare)
-   - **Severity**: What is the impact if it occurs? (Critical / High / Medium / Low)
-   - **Detectability**: How quickly would this failure be detected? (Immediate / Minutes / Hours / Silent)
-4. **Prioritise by Risk Priority Number (RPN)**: Score = Likelihood × Severity × (1/Detectability). Focus controls on high-RPN items
+1. **Decompose the system into components**: List every functional unit:
+   - Services, APIs, workers
+   - Databases, caches, queues
+   - Agents, tools, MCP servers
+   - External dependencies, third-party services
+   - Human actors (operators, approvers)
+
+2. **For each component, enumerate failure modes**: Ask "In what ways can this component fail to do its job?"
+   
+   Standard failure mode categories:
+   - **Silent failure**: Appears to work, produces wrong/corrupted output
+   - **Crash failure**: Component stops responding, process dies
+   - **Slow failure**: Latency degrades until unusable, timeouts cascade
+   - **Corrupt failure**: Data or state becomes inconsistent
+   - **Cascade failure**: This component's failure causes downstream failures
+   - **Security failure**: Component is exploited, produces unauthorized output
+   - **Resource exhaustion**: Memory, disk, connections, rate limits exceeded
+
+3. **For each failure mode, assess three dimensions**:
+   - **Likelihood**: Frequent (weekly+), Occasional (monthly), Rare (yearly), Very Rare (never seen)
+   - **Severity**: Critical (data loss, security breach), High (system down), Medium (degraded), Low (minor impact)
+   - **Detectability**: Immediate (alert fires), Minutes (monitoring catches), Hours (user reports), Silent (never detected)
+
+4. **Calculate Risk Priority Number (RPN)**: RPN = Likelihood × Severity × (inverse of Detectability)
+   
+   Use scale: Likelihood (1-4), Severity (1-4), Detectability (1-4 where 1=immediate, 4=silent)
+   
+   Focus effort on high-RPN items.
+
 5. **Assign controls to high-priority failure modes**:
-   - **Preventive control**: Stops the failure from occurring (validation, circuit breaker, rate limiting)
-   - **Detective control**: Catches the failure quickly (alerting, health check, audit log)
-   - **Corrective control**: Recovers from the failure (retry logic, fallback, rollback)
-6. **Identify single points of failure (SPOF)**: Any component whose failure has no fallback
+   - **Preventive control**: Stops failure from occurring (input validation, rate limiting, circuit breaker, redundancy)
+   - **Detective control**: Catches failure quickly (health check, alerting, audit log, anomaly detection)
+   - **Corrective control**: Recovers from failure (retry logic, fallback, rollback, graceful degradation)
+
+6. **Identify Single Points of Failure (SPOF)**: Components whose failure has no fallback—entire system goes down. Mark these prominently.
+
+7. **Identify cascade paths**: Which component failures trigger other component failures? Map the domino chains.
 
 # Output defaults
-A failure mode table (component | failure mode | likelihood | severity | detectability | RPN | controls), a **SPOF List**, and a **Top 5 Risk Items** section.
+A **Failure Mode Table** with columns: Component | Failure Mode | L | S | D | RPN | Controls
+
+A **SPOF List** of single points of failure with mitigation recommendations.
+
+A **Cascade Paths** section showing failure propagation chains.
+
+A **Top 5 Risk Items** section: highest RPN items with specific control recommendations.
+
+Example row:
+| API Gateway | Rate limit exhaustion | 2 | 3 | 2 | 12 | Preventive: per-tenant limits; Detective: rate monitoring alert; Corrective: graceful 429 with retry-after |
+
+# References
+- https://en.wikipedia.org/wiki/Failure_mode_and_effects_analysis — FMEA methodology
+- IEC 60812 — international standard for FMEA
+- NASA FMEA handbook — rigorous application to critical systems
+- Site Reliability Engineering (Google) — failure mode thinking for software
 
 # Failure handling
-If component boundaries are unclear, list the components that could be identified and note which areas of the system need clarification before their failure modes can be enumerated.
+If component boundaries are unclear:
+1. List components that could be identified
+2. Note which areas of the system need clarification
+3. Perform partial analysis on identifiable components
+4. Request system documentation or architecture diagram to complete analysis

@@ -15,35 +15,78 @@ metadata:
 ---
 
 # Purpose
-Compares a skill's performance against a baseline or competing variant on defined metrics — output quality, trigger accuracy, token cost, and task completion rate — to determine which version to keep.
+Compares skill variants or before/after versions using quantitative metrics: pass rate, token usage, latency, and qualitative win rate. Produces data to decide which variant to keep, whether refinement helped, or if skill is worth maintaining.
 
 # When to use this skill
 Use when:
-- Two versions of a skill exist and one must be chosen as the canonical version
-- A skill has been refined and the new version's improvement over the old needs to be quantified
-- A library audit is needed to determine which skills are worth keeping versus retiring
-- The user says "benchmark this skill", "compare these skill versions", or "is this skill worth using?"
+- Multiple skill variants exist and one needs choosing
+- Skill was refined and impact needs measurement
+- User asks "which is better?", "did this help?", "benchmark these"
+- Periodic audit to cull underperformers
+- Justifying skill maintenance investment
 
 Do NOT use when:
-- Only one version of a skill exists and there is nothing to compare it against (use `skill-evaluation`)
-- The comparison is qualitative only and no metrics are needed
-- The skills being compared have completely different scopes — comparison is meaningless
+- No variants to compare (use `skill-evaluation` for single skill)
+- Building test harness (use `skill-testing-harness`)
+- Debugging why skill fails (use `skill-refinement`)
+- Single quick check, not systematic comparison
 
 # Operating procedure
-1. **Define the benchmark scope**: Which skill(s) are being compared? What is the baseline? (Unaided model, previous version, competing skill)
-2. **Select the test suite**: Use or create 5–10 representative test prompts covering the skill's trigger range. If a `tests/` folder exists (from `skill-testing-harness`), use those fixtures
-3. **Define the metrics to measure**:
-   - **Trigger accuracy**: Precision and recall across the test prompts
-   - **Output quality score**: Rate each output on: completeness (0–3), specificity (0–3), actionability (0–3). Total: /9
-   - **Token cost**: Approximate token count of the skill instructions + typical output
-   - **Task completion rate**: For behaviour tests, did the output satisfy all `expected_output_contains` criteria? (Pass/Fail per test)
-4. **Run each skill/baseline against all test prompts**: Record scores for each metric
-5. **Build the comparison table**: Rows = skills being compared, Columns = metrics. Fill in scores
-6. **Compute the win rate**: For quality comparisons, count the number of test cases where each skill outperforms the others
-7. **State the winner and confidence**: Name the winning skill version with its win rate and the margin over the runner-up. State if the margin is too small to be confident (< 20% win rate advantage = insufficient evidence)
+1. **Define comparison**:
+   - What variants? (A vs B, before vs after, skill vs no-skill)
+   - What metrics matter?
+   - Minimum sample size? (recommend N≥10 per variant)
+2. **Select benchmark cases**:
+   - Use evals/ cases if exist
+   - Cover: typical, edge, adversarial
+   - Same cases for all variants
+3. **Collect quantitative metrics**:
+   - **Pass rate**: % meeting acceptance criteria
+   - **Token usage**: Avg input + output tokens
+   - **Latency**: Time to complete (if measurable)
+   - **Routing accuracy**: Precision and recall
+4. **Collect qualitative metrics** (blind comparison):
+   - Present outputs without labels
+   - Rate: Which better? (A/B/Tie)
+   - Calculate win rate
+5. **Statistical analysis**:
+   - Pass rate: Significant difference? (chi-squared)
+   - Continuous metrics: Meaningful? (>10% = meaningful)
+   - Win rate: Different from 50%?
+6. **Produce benchmark report**:
+   - Summary table
+   - Statistical notes
+   - Recommendation
 
 # Output defaults
-A **Benchmark Configuration** section (skills compared, test suite, metrics), a **Results Table** (skills × metrics), a **Win Rate Summary**, and a **Recommendation** stating which version to promote and any conditions.
+```
+## Benchmark: [Skill A] vs [Skill B]
+
+### Summary
+| Metric | A | B | Winner |
+|--------|---|---|--------|
+| Pass Rate | 85% | 92% | B |
+| Avg Tokens | 1200 | 980 | B |
+| Win Rate | 35% | 65% | B |
+
+### Detailed Results
+[By category if applicable]
+
+### Statistical Notes
+- Pass rate difference: p=X
+- Win rate: significantly > 50%? Yes/No
+
+### Recommendation
+**Keep [winner]**, [deprecate/archive] [loser].
+Rationale: [why]
+```
+
+# References
+- Skill evals/ directories
+- https://docs.anthropic.com/en/docs/test-and-evaluate/eval-overview
 
 # Failure handling
-If test prompts are unavailable, build a minimal 5-prompt test suite using the skill's trigger section before running the benchmark.
+- **Not enough test cases**: Note results preliminary; minimum N=10
+- **Metrics too close**: Keep simpler/smaller as tiebreaker
+- **Variants serve different purposes**: Don't force winner; document when each appropriate
+- **Can't blind comparison**: Note bias risk

@@ -15,40 +15,81 @@ metadata:
 ---
 
 # Purpose
-Evaluates a skill's quality on two dimensions: routing accuracy (does it trigger on the right inputs?) and output quality (is the output better than what the agent would produce without the skill?).
+Measures whether a skill is working: does it route correctly (trigger when should, not trigger when shouldn't) and does it produce better output than not having the skill? Produces quantitative evidence that a skill adds value.
 
 # When to use this skill
 Use when:
-- The user says "evaluate this skill", "is this skill working?", or "how good is this skill?"
-- A skill has been deployed and its value needs to be measured before promoting from draft to stable
-- Two competing skill versions need comparison to determine which to keep
-- A skill is suspected of undertriggering or overtriggering
+- User says "is this skill working?", "evaluate this skill", "does this help?"
+- New skill needs validation before promotion to stable
+- Skill was refined and needs verification fix worked
+- Comparing skill variants to decide which to keep
+- Periodic audit of skill library quality
 
 Do NOT use when:
-- The user wants to run automated eval tests (use `skill-eval-runner`)
-- The skill has never been used — evaluate after at least 3–5 real uses
-- The skill is being evaluated for safety or scope issues (use `skill-safety-review`)
+- Building the test harness/suite (use `skill-testing-harness`)
+- Running existing automated evals (use `skill-eval-runner`)
+- Benchmarking performance metrics (use `skill-benchmarking`)
+- Skill is obviously broken—fix it first (use `skill-refinement`)
 
 # Operating procedure
-1. **Collect evaluation inputs**: Gather 3–10 representative prompts that should trigger this skill and 3–5 prompts that should NOT trigger it
-2. **Evaluate routing accuracy**:
-   - For each trigger prompt: does the skill fire? (Yes/No/Uncertain)
-   - For each non-trigger prompt: does the skill NOT fire? (Correct/False positive)
-   - Calculate trigger precision: correct triggers / (correct triggers + false positives)
-   - Calculate trigger recall: correct triggers / (correct triggers + missed triggers)
-3. **Evaluate output quality against a baseline**:
-   - Run a representative trigger prompt through the skill
-   - Run the same prompt without the skill (baseline: the model's unaided response)
-   - Compare on: completeness (did it cover all expected elements?), specificity (concrete vs. vague), actionability (are outputs usable without further interpretation?), accuracy (are claims correct?)
-4. **Rate each quality dimension**: Worse than baseline / Same / Better — with one sentence of evidence
-5. **Identify the skill's strongest and weakest points**: What does it reliably improve? Where does it add no value or degrade output?
-6. **Issue an overall verdict**:
-   - **Promote**: Routing accurate, output consistently better than baseline
-   - **Refine**: Core value present but specific issues identified (list them)
-   - **Demote or retire**: Routing unreliable or output consistently no better than baseline
+1. **Define what "working" means for this skill**:
+   - **Routing accuracy**: Triggers on positive cases? Not trigger on negative?
+   - **Output quality**: Correct, well-formatted, complete?
+   - **Baseline comparison**: Better than without skill?
+2. **Prepare evaluation inputs**:
+   - 5-10 positive trigger cases (should trigger)
+   - 5-10 negative trigger cases (should NOT trigger)
+   - 3-5 cases for output quality assessment
+3. **Run routing evaluation**:
+   - Each positive case: Did skill trigger? (target: 100%)
+   - Each negative case: Did skill NOT trigger? (target: 100%)
+   - Calculate Precision = TP / (TP + FP)
+   - Calculate Recall = TP / (TP + FN)
+4. **Run output quality evaluation**:
+   - For each quality case, run with skill active
+   - Assess against rubric:
+     - Correct: Solves the problem?
+     - Complete: All parts present?
+     - Well-formatted: Matches expected format?
+     - No hallucination: Claims accurate?
+5. **Run baseline comparison** (recommended):
+   - Same quality cases, run without skill
+   - Compare: Which better? (blind if possible)
+   - Calculate win rate: skill wins / total
+6. **Synthesize results**:
+   - Routing: Pass if precision ≥95%, recall ≥90%
+   - Quality: Pass if ≥80% outputs meet rubric
+   - Baseline: Pass if skill wins ≥60%
+7. **Issue verdict**: Pass / Fail / Needs Work (with specific issues)
 
 # Output defaults
-A **Routing Accuracy** table (precision and recall), an **Output Quality** comparison for the representative case, and a **Verdict** with specific evidence. If "Refine" verdict, list the exact issues to fix.
+```
+## Skill Evaluation: [skill-name]
+
+### Routing Accuracy
+| Metric | Value | Target | Pass? |
+|--------|-------|--------|-------|
+| Precision | X% | ≥95% | ✓/✗ |
+| Recall | X% | ≥90% | ✓/✗ |
+
+**Issues**: [false negatives/positives]
+
+### Output Quality (N cases)
+**Score**: X/N pass (Y%)
+
+### Baseline Comparison
+**Win rate**: X/N (Y%)
+
+### Verdict: [Pass | Fail | Needs Work]
+**Issues**: [list or "None"]
+```
+
+# References
+- https://docs.anthropic.com/en/docs/test-and-evaluate/eval-overview — Anthropic eval guidance
+- Skill's evals/ directory if exists
 
 # Failure handling
-If no real usage data exists, run the evaluation using synthetic test prompts and label all findings as **Synthetic (not validated)**.
+- **No eval cases exist**: Create minimum set (3 positive, 3 negative triggers)
+- **Can't determine if triggered**: Check client logs or add instrumentation
+- **Baseline inconclusive**: Increase sample size or define clearer rubric
+- **Routing passes but quality fails**: Route to `skill-refinement`

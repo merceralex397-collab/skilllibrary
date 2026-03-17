@@ -15,43 +15,230 @@ metadata:
 ---
 
 # Purpose
-Generate the base repository file structure — README, AGENTS.md, docs layout, .opencode/ config, CI skeleton, and managed surfaces — from a canonical brief.
+Generates the base repository file structure—README, AGENTS.md, docs layout, .github templates, and agent configuration directories—from a canonical brief and stack profile. This is pure mechanical generation: it creates the skeleton that other skills populate with project-specific content.
 
 # When to use this skill
 Use when:
-- A greenfield repository is being created and needs its initial structure
-- The user says "scaffold this project", "set up the repo", or "generate the base structure"
-- A canonical brief or spec-pack exists and needs to be translated into files
-- An existing repo is missing standard managed surfaces (no AGENTS.md, no .opencode/, etc.)
+- Starting a new repository from scratch after spec normalization
+- Converting an empty repo into an agent-ready workspace
+- Regenerating scaffold after major structural changes
 
 Do NOT use when:
-- The repo already has all managed surfaces and only needs content updates
-- The request is about scaffolding a specific feature, not the overall repo structure
+- The repo already has established structure (risks overwriting)
+- Only updating specific files (edit directly instead)
+- Working on an existing project with custom organization
 
 # Operating procedure
-1. **Confirm brief**: read the canonical brief (or run spec-pack-normalizer first if missing)
-2. **Detect stack**: run stack-profile-detector to determine language, framework, and cloud target
-3. **Generate the file tree**:
-   ```
-   README.md               ← project overview, setup instructions, links to AGENTS.md
-   AGENTS.md               ← agent operating rules, stack conventions, managed surfaces list
-   .opencode/
-     agents/               ← one .md file per agent role
-     commands/             ← slash command definitions
-     skills/               ← project-local skill overrides
-     tools/                ← tool manifests
-   docs/
-     adr/                  ← architecture decision records
-     specs/                ← canonical brief and design docs
-   tickets/                ← ticket system (use ticket-pack-builder)
-   .github/
-     workflows/            ← CI skeleton
-   ```
-4. **Write each file** with real content, not placeholders. README must have actual setup steps. AGENTS.md must have actual stack rules.
-5. **Validate**: check that all cross-references between files are correct (e.g., AGENTS.md mentions docs that exist)
+
+## 1. Verify prerequisites
+Check that required inputs exist:
+```bash
+test -f docs/BRIEF.md || echo "ERROR: Need docs/BRIEF.md first"
+test -f docs/STACK-PROFILE.md || echo "WARNING: No stack profile, using defaults"
+```
+
+## 2. Create directory structure
+```bash
+mkdir -p src tests docs scripts .github/ISSUE_TEMPLATE .github/workflows
+```
+
+For agent-operated repos, also create:
+```bash
+mkdir -p .opencode/agents .opencode/skills .opencode/tools tickets
+```
+
+## 3. Generate README.md
+```markdown
+# [Project Name from BRIEF.md]
+
+[One-line description from BRIEF.md]
+
+## Quick Start
+
+```bash
+[install_command from STACK-PROFILE.md]
+[build_command from STACK-PROFILE.md]
+[test_command from STACK-PROFILE.md]
+```
+
+## Documentation
+
+- [Project Brief](docs/BRIEF.md) — What we're building and why
+- [Architecture](docs/ARCHITECTURE.md) — System design
+- [Contributing](docs/CONTRIBUTING.md) — How to contribute
+
+## For AI Agents
+
+See [AGENTS.md](AGENTS.md) for agent-specific instructions.
+```
+
+## 4. Generate AGENTS.md
+```markdown
+# Agent Instructions
+
+## Reading Order
+1. `docs/BRIEF.md` — Understand what we're building
+2. `docs/STACK-PROFILE.md` — Know the tech stack
+3. `docs/ARCHITECTURE.md` — Understand the system design
+4. `tickets/BOARD.md` — See current work status
+
+## Before Making Changes
+- Check `tickets/` for relevant open tickets
+- Run validation: `[validation_command]`
+- Create a branch: `git checkout -b tkt-XXX-description`
+
+## Commit Convention
+```
+tkt-XXX: Brief description
+
+- Detail 1
+- Detail 2
+```
+
+## What NOT to Modify
+- `docs/BRIEF.md` — Source of truth, change via decision process
+- Generated files in `dist/` or `build/`
+- Lock files without explicit instruction
+```
+
+## 5. Generate .github templates
+
+**ISSUE_TEMPLATE/bug_report.md**:
+```markdown
+---
+name: Bug Report
+about: Report a bug
+labels: bug
+---
+
+## Description
+[What happened]
+
+## Expected Behavior
+[What should happen]
+
+## Steps to Reproduce
+1. 
+2. 
+3. 
+
+## Environment
+- OS: 
+- Version: 
+```
+
+**ISSUE_TEMPLATE/feature_request.md**:
+```markdown
+---
+name: Feature Request
+about: Suggest a feature
+labels: enhancement
+---
+
+## Problem
+[What problem does this solve]
+
+## Proposed Solution
+[How should it work]
+
+## Alternatives Considered
+[Other approaches]
+```
+
+**pull_request_template.md**:
+```markdown
+## Summary
+[What does this PR do]
+
+## Related Ticket
+Closes TKT-XXX
+
+## Checklist
+- [ ] Tests pass
+- [ ] Linting passes
+- [ ] Documentation updated (if needed)
+```
+
+## 6. Generate docs skeleton
+
+**docs/ARCHITECTURE.md**:
+```markdown
+# Architecture
+
+## Overview
+[To be filled: high-level system description]
+
+## Components
+[To be filled: major components and their responsibilities]
+
+## Data Flow
+[To be filled: how data moves through the system]
+```
+
+**docs/CONTRIBUTING.md**:
+```markdown
+# Contributing
+
+## Setup
+[To be filled: development environment setup]
+
+## Workflow
+1. Pick a ticket from `tickets/BOARD.md`
+2. Create a branch: `git checkout -b tkt-XXX-description`
+3. Make changes, commit incrementally
+4. Open PR referencing the ticket
+```
+
+## 7. Create placeholder files
+```bash
+touch src/.gitkeep tests/.gitkeep scripts/.gitkeep
+```
+
+## 8. Initialize git if needed
+```bash
+git init 2>/dev/null || true
+echo "node_modules/\ndist/\n.env\n*.log" >> .gitignore
+```
+
+## 9. Commit scaffold
+```bash
+git add -A
+git commit -m "chore: initial repository scaffold
+
+Generated by repo-scaffold-factory from:
+- docs/BRIEF.md
+- docs/STACK-PROFILE.md"
+```
 
 # Output defaults
-Complete file tree committed to the repo. Every file must have real content — "TODO: fill in" is not acceptable output.
+```
+./
+├── README.md
+├── AGENTS.md
+├── .gitignore
+├── docs/
+│   ├── BRIEF.md (input, not generated)
+│   ├── STACK-PROFILE.md (input, not generated)
+│   ├── ARCHITECTURE.md
+│   └── CONTRIBUTING.md
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   └── pull_request_template.md
+├── src/
+├── tests/
+├── scripts/
+├── tickets/ (if agent-operated)
+└── .opencode/ (if agent-operated)
+```
+
+# References
+- GitHub template repositories: https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template
+- Use `gh repo create --template` for template-based creation
 
 # Failure handling
-If the brief is insufficient to fill a section, leave a `<!-- MISSING: description of what's needed -->` HTML comment in that section and log it as a follow-up item.
+- **No BRIEF.md**: Stop. Cannot generate meaningful scaffold without knowing what the project is.
+- **No STACK-PROFILE.md**: Proceed with generic structure. Log warning: "Stack not specified, using generic scaffold."
+- **Directory already exists with content**: Do not overwrite. Report conflict and ask for confirmation or use `--force` flag.
+- **Git init fails**: Continue without git. Note that repo is not version controlled.

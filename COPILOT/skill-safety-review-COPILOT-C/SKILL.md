@@ -15,35 +15,97 @@ metadata:
 ---
 
 # Purpose
-Audits a skill for instructions that could cause destructive, deceptive, or out-of-scope behaviour when executed by an agent, particularly before the skill is shared, published, or installed in a production environment.
+Reviews skills for safety issues: destructive operations without confirmation, excessive permissions, scope creep, prompt injection vulnerabilities, and misleading descriptions. Required before publishing to shared registries.
 
 # When to use this skill
 Use when:
-- A skill is about to be published to a registry or shared outside the original team
-- The user says "safety review this skill", "is this skill safe?", or "check for harmful instructions"
-- A skill was received from an external source and needs to be vetted before installation
-- A skill has been through several edits and may have accumulated unintended instructions
+- User says "review for safety", "is this safe?", "security review"
+- Before publishing to shared registry/marketplace
+- Importing from untrusted external source
+- Skill flagged during audit
+- Skill performs consequential operations (deletion, API calls, deployments)
 
 Do NOT use when:
-- The review is for code quality or logical correctness (not safety)
-- The skill is internal-only and the risk of external misuse is zero
-- The goal is to evaluate output quality (use `skill-evaluation`)
+- Reviewing quality/routing (use `skill-evaluation`)
+- Skill purely informational, no side effects
+- Already reviewed and unchanged
 
 # Operating procedure
-1. **Check for destructive instructions**: Does any step instruct an agent to: delete files, overwrite data, modify production systems, send external requests, or execute code without explicit user confirmation? Flag each one
-2. **Check for scope creep instructions**: Does the skill instruct the agent to do things beyond its stated purpose? An `assumptions-audit` skill that also writes code, or a `planning` skill that directly modifies files, has dangerous scope creep
-3. **Check for permission escalation**: Does the skill instruct the agent to request elevated permissions, bypass access controls, or act with more authority than it was given?
-4. **Check for deceptive instructions**: Does the skill instruct the agent to: pretend to be a different agent, hide its actions from the user, produce output that misrepresents its source, or suppress error messages?
-5. **Check for injection vulnerability**: Does the skill instruct the agent to process user-provided text and then execute or relay that text without sanitisation? (e.g. "pass the user's input directly to the command" is a risk)
-6. **Check for data exfiltration patterns**: Does the skill instruct the agent to collect, summarise, or output information beyond what the task requires?
-7. **Rate each finding**:
-   - **Blocker**: Must be fixed before any use
-   - **High**: Should be fixed before sharing outside the team
-   - **Low**: Worth noting but not blocking
-8. **Issue a clearance verdict**: Safe to publish / Safe with conditions (list conditions) / Not safe (list blockers)
+1. **Check destructive operations**:
+   - File deletion (rm, unlink)
+   - Database mods (DROP, DELETE)
+   - Git force (force push, reset --hard)
+   - External API calls (POST, PUT, DELETE)
+   - System mods (chmod, service restart)
+   - **Flag**: Any without confirmation step
+2. **Check excessive permissions**:
+   - More access than needed?
+   - Accessing files outside scope?
+   - Credentials not justified?
+   - **Flag**: Any unjustified permission
+3. **Check scope creep**:
+   - Steps not implied by description?
+   - Actions beyond user request?
+   - Affects unexpected systems?
+   - **Flag**: Unexpected actions
+4. **Check prompt injection**:
+   - Processes untrusted input?
+   - Malicious input could alter behavior?
+   - Unescaped interpolations?
+   - **Flag**: External content → instructions path
+5. **Check misleading descriptions**:
+   - Description matches behavior?
+   - Hidden behaviors?
+   - Severity clear?
+   - **Flag**: Mismatch
+6. **Check scripts/**:
+   - Unsafe operations?
+   - Hardcoded credentials?
+   - Unexpected network calls?
+   - **Flag**: Undocumented operations
+7. **Check error handling**:
+   - What if fails mid-operation?
+   - Cleanup for partial states?
+   - **Flag**: Missing rollback for destructive ops
+8. **Issue verdict**:
+   - **Safe**: No issues
+   - **Safe with warnings**: Minor issues documented
+   - **Requires changes**: Must fix before use
+   - **Unsafe**: Fundamental problems
 
 # Output defaults
-A findings list with severity ratings, a **Verdict** (Safe / Safe with conditions / Not safe), and a **Required Changes** list for any Blocker findings.
+```
+## Safety Review: [skill-name]
+
+**Verdict**: [Safe | Safe with warnings | Requires changes | Unsafe]
+
+### Destructive Operations
+| Op | Location | Confirmation? | Status |
+|----|----------|---------------|--------|
+| rm | step 5 | No | ❌ Add confirmation |
+
+### Permissions
+| Permission | Justified? |
+|------------|------------|
+| File write | Yes |
+| Network | No |
+
+### Injection Risks
+| Vector | Risk | Mitigation |
+|--------|------|------------|
+| File content | Medium | Sanitize |
+
+### Required Changes
+1. Add confirmation before rm
+2. Justify network access
+```
+
+# References
+- SKILL.md and scripts/
+- OWASP prompt injection guidance
+- Principle of least privilege
 
 # Failure handling
-If the skill is so vague that intent cannot be determined, mark it as **Unverifiable** — a skill whose instructions cannot be understood cannot be cleared as safe.
+- **Can't understand skill**: Unsafe—if reviewer can't, user can't
+- **Intentionally destructive** (cleanup skill): Ensure explicit, require confirmation, safe if guarded
+- **External deps unauditable**: Note trust assumption

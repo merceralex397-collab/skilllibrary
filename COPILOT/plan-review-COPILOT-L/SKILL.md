@@ -15,34 +15,82 @@ metadata:
 ---
 
 # Purpose
-Reviews a plan before execution starts to assess whether it is complete enough to begin, correctly sequenced, free of hidden assumptions, and likely to succeed given current constraints.
+Critically reviews a plan before execution begins to identify gaps, hidden assumptions, incorrect sequencing, and unrealistic estimates. The goal is to catch problems while they're cheap to fix—before any code is written or resources committed.
 
 # When to use this skill
 Use when:
-- The user says "review this plan", "is this plan ready?", or "check this before we start"
-- A plan has been written by a planner agent and needs a second-pass review before execution
-- An implementation is about to begin and the plan needs a final sanity check
-- A ticket or brief is about to be handed to an implementer and needs to be verified
+- User says "review this plan", "is this plan ready?", "check this before we start", or "sanity check this"
+- A planning agent produced output that needs second-pass validation before handoff
+- Implementation is about to begin and someone should verify the plan makes sense
+- A ticket/brief will be handed to an implementer who shouldn't discover surprises mid-work
 
 Do NOT use when:
-- The plan is mid-execution and needs progress assessment (use `drift-detection`)
-- The user wants only risk analysis (use `premortem`)
-- No plan exists — help write one first (use `planning`)
+- Plan is mid-execution and needs progress tracking (use `drift-detection`)
+- User wants only risk brainstorming without reviewing a specific plan (use `premortem`)
+- No plan exists yet—create one first (use `planning`)
+- User wants estimation, not review (use `planning` with sizing)
 
 # Operating procedure
-1. **Check completeness**: Does the plan have all required sections? Required: goal, acceptance criteria, steps or tasks, dependencies, constraints, and definition of done. Flag any missing sections
-2. **Check sequencing**: Are the steps in the correct dependency order? Could any step start before its prerequisites are done? Could any two steps be parallelised but are listed sequentially?
-3. **Check acceptance criteria**: Are the success criteria observable and testable? Flag any criterion containing "works correctly", "handles errors", or other subjective language (apply `acceptance-criteria-hardening` logic)
-4. **Audit assumptions**: List every implicit assumption in the plan. For each, mark as: Verified, Plausible, or Risky (same as `assumptions-audit` abbreviated pass)
-5. **Identify the critical path**: Which sequence of steps determines the minimum timeline? Name the critical path and flag any step on it that is unclear, underespecified, or blocked
-6. **Check for missing work**: Is there implicit work not listed? Common omissions: setup/teardown, testing tasks, documentation updates, migration steps, rollback plan
-7. **Issue a readiness verdict**: One of:
-   - **Ready to Execute**: Plan is complete, sequenced correctly, and assumptions are acceptable
-   - **Ready with Caveats**: Executable but specific items need attention during execution (list them)
-   - **Not Ready**: Specific blocking gaps must be filled before implementation should begin (list them)
+1. **Check structural completeness**: Required sections: goal statement, acceptance criteria, task list, dependencies, constraints, and definition of done. Flag missing sections by name
+2. **Validate sequencing**:
+   - Draw implicit dependency graph. Flag any task listed after its dependent
+   - Flag parallelizable work that's serialized unnecessarily
+   - Flag concurrent tasks that share resources without acknowledgment
+3. **Audit acceptance criteria**:
+   - Each criterion must be observable and testable by someone unfamiliar with the work
+   - Flag subjective language: "works correctly", "handles errors gracefully", "good performance"
+   - Convert one vague criterion to concrete form as example
+4. **Surface hidden assumptions**: List every unstated assumption. Categorize each:
+   - **Verified**: You confirmed it (cite source)
+   - **Plausible**: Reasonable default, state the risk if wrong
+   - **Risky**: Could invalidate the plan; recommend verification step
+5. **Identify critical path**: Name the sequence of blocking tasks that determines minimum duration. Flag any critical-path step that is vague, underspecified, or externally blocked
+6. **Find missing work**: Common omissions to check:
+   - Setup/teardown (environment, data, permissions)
+   - Testing (unit, integration, manual verification)
+   - Documentation updates
+   - Migration/rollback procedures
+   - Review/approval gates
+7. **Estimate sanity check**: If estimates exist, flag any task >16 hours or any estimate lacking uncertainty acknowledgment
+8. **Issue verdict**:
+   - **Ready**: Complete, correctly sequenced, acceptable assumptions
+   - **Ready with Caveats**: Executable but [list] needs attention during execution
+   - **Not Ready**: [List] must be resolved before implementation
 
 # Output defaults
-A structured review with sections: Completeness, Sequencing, Acceptance Criteria Quality, Assumption Audit, Critical Path, Missing Work. End with a one-line **Readiness Verdict** and any **Blocking Issues**.
+```
+## Plan Review: [Plan Name]
+
+### Completeness
+[Present/missing sections]
+
+### Sequencing Issues
+[Dependency problems or "None found"]
+
+### Acceptance Criteria Quality
+[Issues found or "All criteria testable"]
+
+### Hidden Assumptions
+| Assumption | Status | Risk if Wrong |
+|------------|--------|---------------|
+
+### Critical Path
+[Task A → Task B → Task C] (N days)
+Critical path concerns: [list or "None"]
+
+### Missing Work
+[List or "None identified"]
+
+### Verdict: [Ready | Ready with Caveats | Not Ready]
+**Blocking issues**: [list or "None"]
+**Caveats**: [list or "None"]
+```
+
+# References
+- https://cookbook.openai.com — planning patterns from OpenAI
+- https://www.atlassian.com/agile/project-management/estimation — estimation calibration
 
 # Failure handling
-If the plan is a rough outline or bullet list without sufficient detail, state the minimum structure required for a meaningful review and return the plan with questions embedded in the gaps.
+- **Plan is just bullet points**: State minimum structure needed, embed questions at each gap: "Goal: [WHAT IS THE OBSERVABLE OUTCOME?]"
+- **Plan references external docs you can't access**: Note which sections cannot be reviewed and why; review what's available
+- **Multiple interpretation possible**: State the two most likely interpretations, review against the more conservative one, flag ambiguity for author

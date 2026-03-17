@@ -15,44 +15,80 @@ metadata:
 ---
 
 # Purpose
-Executes a skill's test suite (from the `tests/` folder created by `skill-testing-harness`) and produces a structured report covering trigger accuracy, behaviour correctness, and comparison against baseline.
+Executes a skill's eval suite (from evals/ directory) and produces structured report covering trigger accuracy, behavior correctness, and baseline comparison. Interprets results and generates quality verdict.
 
 # When to use this skill
 Use when:
-- The user says "run the skill eval", "test this skill", or "run the tests for this skill"
-- A skill has been modified and regression testing is needed before promoting it
-- A CI check or pre-release validation requires a documented eval run
-- A skill's quality needs to be measured before inclusion in a catalog or library release
+- User says "run the eval", "test this skill", "run the tests"
+- Skill modified and needs regression testing before promotion
+- CI/pre-release validation requires documented eval
+- Quality measurement before catalog/release inclusion
 
 Do NOT use when:
-- No `tests/` folder exists for the skill — build one first (use `skill-testing-harness`)
-- The goal is to evaluate skill quality without running tests (use `skill-evaluation` for manual evaluation)
-- The goal is to benchmark two skill versions (use `skill-benchmarking`)
+- No evals/ exists—build first (use `skill-testing-harness`)
+- Manual evaluation without tests (use `skill-evaluation`)
+- Benchmarking variants (use `skill-benchmarking`)
 
 # Operating procedure
-1. **Locate the test suite**: Check for `SKILLNAME/tests/triggers.md`, `behaviour.md`, and `baseline.md`. Confirm all three exist before running; note which are missing
-2. **Run trigger tests** (from `tests/triggers.md`):
-   - For each positive test case: present the prompt to the skill context and check if the skill would fire (Yes/No)
-   - For each negative test case: confirm the skill does NOT fire
-   - Record: prompt, expected trigger, actual trigger, Pass/Fail
-3. **Run behaviour tests** (from `tests/behaviour.md`):
-   - For each test case: run the skill with the provided input
-   - Check the output against `expected_output_contains`: does the output include each required element?
-   - Record: test ID, each expected element, Present/Absent, overall Pass/Fail
-4. **Run baseline comparison** (from `tests/baseline.md`):
-   - Run the representative prompt with the skill active
-   - Note which `with_skill_expected` elements are present in the output
-   - Note which `baseline_expected` elements would be present in unaided output
-   - Compute: skill adds value? (Yes if at least 2 expected elements are present that baseline would lack)
+1. **Locate test suite**:
+   - Check for `evals/triggers.yaml`, `outputs.yaml`, `baselines.yaml`
+   - Note which exist/missing
+2. **Run trigger tests** (from triggers.yaml):
+   - Each positive: Does skill fire? (target: Yes)
+   - Each negative: Does skill NOT fire? (target: No)
+   - Record: prompt, expected, actual, Pass/Fail
+3. **Run output tests** (from outputs.yaml):
+   - Run skill with input
+   - Check against expected_sections, required_patterns, forbidden_patterns
+   - Record: test, each check, Pass/Fail
+4. **Run baseline comparison** (from baselines.yaml):
+   - Run with skill active
+   - Note expected elements present
+   - Compare to baseline expected
+   - Skill adds value? (Yes if 2+ elements baseline would lack)
 5. **Aggregate results**:
-   - Trigger precision: correct triggers / (correct triggers + false positives)
-   - Trigger recall: correct triggers / (correct triggers + missed triggers)
-   - Behaviour pass rate: passed behaviour tests / total behaviour tests
-   - Baseline win: Yes/No with evidence
-6. **Issue the eval verdict**: Pass (all rates ≥ 80%, baseline win = Yes) / Pass with issues (any rate 60–79%) / Fail (any rate < 60% or baseline win = No)
+   - Trigger precision: TP / (TP + FP)
+   - Trigger recall: TP / (TP + FN)
+   - Output pass rate: passed / total
+   - Baseline win: Yes/No
+6. **Issue verdict**:
+   - **Pass**: All rates ≥80%, baseline win
+   - **Pass with issues**: Any rate 60-79%
+   - **Fail**: Any rate <60% or baseline lose
 
 # Output defaults
-An **Eval Report** with: trigger test results table, behaviour test results table, baseline comparison summary, aggregate metrics, and a **Verdict** (Pass / Pass with issues / Fail). Include the date and skill version evaluated.
+```
+## Eval Report: [skill-name]
+**Date**: YYYY-MM-DD
+**Version**: X.Y.Z
+
+### Trigger Tests
+| Prompt | Type | Expected | Actual | Result |
+|--------|------|----------|--------|--------|
+| "deploy app" | positive | trigger | trigger | ✓ |
+
+**Precision**: X%  **Recall**: Y%
+
+### Output Tests
+| Test | Checks Passed | Result |
+|------|---------------|--------|
+| basic | 5/5 | ✓ |
+
+**Pass rate**: X%
+
+### Baseline Comparison
+**Skill adds value**: Yes/No
+**Evidence**: [elements present vs baseline]
+
+### Verdict: [Pass | Pass with issues | Fail]
+**Issues**: [list or "None"]
+```
+
+# References
+- Skill's evals/ directory
+- https://docs.anthropic.com/en/docs/test-and-evaluate/eval-overview
 
 # Failure handling
-If the skill produces no output when run (silent failure), record as a Fail with reason "No output produced" and halt remaining tests for that test case. Do not skip — a silent skill is a failed skill.
+- **Silent skill failure** (no output): Record Fail "No output", halt remaining tests for case
+- **Missing test files**: Report which missing, run available ones
+- **Flaky results**: Run 3x, majority rules, note flakiness

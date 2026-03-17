@@ -15,38 +15,86 @@ metadata:
 ---
 
 # Purpose
-Assembles a skill folder into a distributable, installable artifact with a validated manifest, correct file structure, and optional checksum — ready for publishing to a registry or sharing as a bundle.
+Packages a skill folder into a distributable format (zip/tarball) with manifest, integrity checksums, and optional client-specific overlays. A packaged skill can be shared, versioned, and installed via registry tooling.
 
 # When to use this skill
 Use when:
-- The user says "package this skill", "make this skill installable", or "prepare this skill for distribution"
-- A skill has been authored or refined and needs to be published to a registry
-- A set of skills needs to be bundled into a single installable package
-- A skill is being shared with another repo or team and needs a clean, self-contained artifact
+- User says "package this skill", "create bundle", "prepare for distribution"
+- Skill ready for sharing outside source repository
+- Publishing to registry or marketplace
+- Creating versioned release
 
 Do NOT use when:
-- The skill is not yet complete or has not passed a safety review
-- The goal is installation into a target repo (use `skill-installation`)
-- The goal is to orchestrate packaging of multiple skills (use `skill-packager`)
+- Skill still in development (finish authoring first)
+- Just need to copy folder locally (no packaging needed)
+- Orchestrating multiple skills (use `skill-packager`)
+- Installing package (use `skill-installation`)
 
 # Operating procedure
-1. **Validate the skill is ready to package**:
-   - SKILL.md exists and has complete frontmatter (name, description, source, license, compatibility, metadata)
-   - No boilerplate anti-patterns in the body (check against `skill-anti-patterns`)
-   - If a `tests/` folder exists, all tests pass (or are marked as expected-fail with explanation)
-2. **Verify the directory structure**: The skill folder must contain: `SKILL.md` at minimum. Optional: `tests/`, `references/`, `overlays/`, `examples/`
-3. **Generate the manifest file** (`manifest.json` in the skill folder):
-   - `name`, `version`, `description` (from frontmatter)
-   - `files`: list of all files in the bundle
-   - `checksum`: SHA-256 of SKILL.md content
-   - `compatibility`: clients list from frontmatter
-   - `source` and `license`
-4. **Create the zip bundle**: `SKILLNAME-VERSION.zip` containing the skill folder with all files
-5. **Validate the bundle**: Unzip to a temp location, verify all listed files are present, verify the manifest checksum matches SKILL.md
-6. **Tag the release**: Update `metadata.maturity` from `draft` to `stable` in the frontmatter if the skill has been evaluated
+1. **Validate skill is packageable**:
+   - SKILL.md exists with valid frontmatter (name, description, license)
+   - Required fields present
+   - No broken references to missing files
+   - All scripts/ and references/ files exist
+2. **Create manifest file** (`manifest.yaml`):
+   ```yaml
+   name: skill-name
+   version: 1.0.0
+   description: "[from frontmatter]"
+   license: Apache-2.0
+   author: [author]
+   repository: [source URL]
+   files:
+     - SKILL.md
+     - scripts/*
+     - references/*
+     - evals/*
+   compatibility:
+     clients: [list]
+   checksum: [sha256]
+   ```
+3. **Generate client overlays** (if needed):
+   - Create overlays/ directory
+   - Each: overlays/[client].yaml with modifications
+4. **Calculate integrity checksum**:
+   - SHA-256 of all files concatenated
+   - Store in manifest
+5. **Create bundle**:
+   - `tar -czvf skill-name-1.0.0.tar.gz skill-folder/`
+   - Or: `zip -r skill-name-1.0.0.zip skill-folder/`
+6. **Validate bundle**:
+   - Extract to temp location
+   - Verify files present
+   - Verify checksum matches
+   - Verify SKILL.md parses
+7. **Document installation**: Add instructions to manifest
 
 # Output defaults
-A `manifest.json` in the skill folder, a `.zip` bundle ready for distribution, and a **Package Validation** report confirming all files present and checksum verified.
+```
+skill-name-1.0.0.tar.gz
+├── manifest.yaml
+├── SKILL.md
+├── scripts/
+├── references/
+├── evals/
+└── overlays/
+
+## Verification Report
+- [x] SKILL.md valid
+- [x] Manifest complete
+- [x] All files present
+- [x] Checksum: abc123...
+- [x] Extraction passed
+
+Install: npx skills add ./skill-name-1.0.0.tar.gz
+```
+
+# References
+- https://github.com/anthropics/skills
+- https://agentskills.io
 
 # Failure handling
-If the skill has missing frontmatter fields or anti-pattern content, list the specific issues that must be fixed before packaging can proceed.
+- **Missing required files**: List what's missing; cannot package
+- **Invalid frontmatter**: Show errors; fix before packaging
+- **Checksum mismatch**: Re-generate, re-create bundle
+- **Overlay conflicts with base**: Overlays modify only, not contradict

@@ -15,58 +15,91 @@ metadata:
 ---
 
 # Purpose
-Identifies specific anti-patterns in a SKILL.md file that reduce its reliability, trigger accuracy, or output quality, and provides the corresponding fix for each.
+Identifies specific anti-patterns in SKILL.md that reduce reliability, trigger accuracy, or output quality. Provides checklist with fixes. Use as QA lens when authoring, refining, or reviewing skills.
 
 # When to use this skill
 Use when:
-- The user says "check this skill for anti-patterns", "what's wrong with this skill?", or "review this skill against quality standards"
-- A skill is being reviewed before promotion from draft to stable
-- A skill is producing unexpected outputs and a quality audit is needed
-- A skill was written quickly and needs a pass for structural issues
+- User says "check for anti-patterns", "what's wrong?", "review against standards"
+- Skill being reviewed before promotion draft → stable
+- Skill producing unexpected outputs
+- Quick audit needed for structural issues
 
 Do NOT use when:
-- The goal is a full skill rewrite (use `skill-authoring`)
-- The goal is routing/trigger improvement specifically (use `skill-trigger-optimization`)
-- The skill is confirmed good — no need to scan a healthy skill for problems
+- Full rewrite needed (use `skill-authoring`)
+- Only triggers need fixing (use `skill-trigger-optimization`)
+- Skill confirmed working—don't scan healthy skills
 
 # Operating procedure
 
-Check the skill for each of the following anti-patterns. For each one found, mark it as PRESENT and provide the specific fix.
+Check for each anti-pattern. For each PRESENT, provide specific fix.
 
 **AP-1: Circular trigger language**
-Pattern: "Use when the task clearly involves X" or "when the user or repo work points at X"
-Fix: Replace with specific phrases the user would actually say, or specific observable conditions
+- Pattern: "Use when task clearly involves X"
+- Fix: Replace with specific phrases user would say
 
 **AP-2: Boilerplate procedure steps**
-Pattern: Steps that say "Keep the scope explicit", "Prefer references, scripts, or examples", or "Decide whether this belongs in the core"
-Fix: Delete these steps. They are meta-commentary that survived from a template, not real instructions
+- Pattern: "Keep scope explicit", "Prefer references", "Decide whether belongs in core"
+- Fix: Delete—meta-commentary from template, not instructions
 
 **AP-3: Generic output defaults**
-Pattern: "Structured markdown artifact(s) committed to the repo or surfaced as a response, with clear next steps"
-Fix: Name the specific output format — table, numbered list, named sections, file type — and describe its contents
+- Pattern: "Structured markdown artifact(s) with clear next steps"
+- Fix: Name specific format—sections, tables, labels
 
 **AP-4: Generic failure handling**
-Pattern: "If inputs are missing, surface the gap as a decision item rather than guessing"
-Fix: Name the specific most-common failure for this skill and state the exact response to it
+- Pattern: "If inputs missing, surface gap as decision item"
+- Fix: Name specific most-common failure and response
 
 **AP-5: Overloaded purpose**
-Pattern: The Purpose section contains "and" more than once, or covers two different task families
-Fix: Split the skill (use `skill-variant-splitting`) or narrow the scope
+- Pattern: Purpose has "and" 2+ times, covers different task families
+- Fix: Split (use `skill-variant-splitting`) or narrow
 
 **AP-6: Unmeasurable acceptance**
-Pattern: The skill's output cannot be evaluated by an agent without human judgment ("good summary", "appropriate level of detail")
-Fix: Define the output with observable criteria — section names, field counts, presence of specific labels
+- Pattern: Output can't be evaluated without human judgment ("good", "appropriate")
+- Fix: Observable criteria—section names, counts, labels
 
 **AP-7: Missing Do NOT use when**
-Pattern: No "Do NOT use when" section, or it is empty
-Fix: Add 1–3 cases that a user might mistakenly invoke this skill for, naming the correct alternative
+- Pattern: No section or empty
+- Fix: Add 1-3 confusion cases with alternatives
 
 **AP-8: Missing failure handling**
-Pattern: No failure handling section
-Fix: Add one, covering the most common input failure mode for this skill type
+- Pattern: No section
+- Fix: Add covering most common failure mode
+
+**AP-9: Vague procedure steps**
+- Pattern: "Consider", "Think about", "You might want to"
+- Fix: Concrete action verbs—"Write", "Check", "List"
+
+**AP-10: No references**
+- Pattern: No URLs to authoritative sources
+- Fix: Add real documentation links
 
 # Output defaults
-A checklist of all 8 anti-patterns with PRESENT/ABSENT status for each, plus the specific fix for every PRESENT finding. A **Clean Bill of Health** statement if all 8 are ABSENT.
+```
+## Anti-Pattern Audit: [skill-name]
+
+| ID | Pattern | Status | Fix |
+|----|---------|--------|-----|
+| AP-1 | Circular triggers | PRESENT | Replace "clearly involves" with "when user says X" |
+| AP-2 | Boilerplate steps | ABSENT | — |
+...
+
+### Summary
+- PRESENT: 3 (AP-1, AP-4, AP-7)
+- ABSENT: 7
+
+### Priority Fixes
+1. AP-1: [specific fix]
+2. AP-4: [specific fix]
+3. AP-7: [specific fix]
+```
+
+If all ABSENT: "**Clean Bill of Health** — no anti-patterns detected"
+
+# References
+- This skill's checklist
+- Skill authoring guidelines
 
 # Failure handling
-If the skill file cannot be read or is empty, report that the file is unavailable and no audit can be completed.
+- **File unavailable**: Report and halt
+- **Skill too broken to audit**: Recommend full rewrite via `skill-authoring`
+- **Multiple interpretations**: Flag ambiguity, audit conservatively

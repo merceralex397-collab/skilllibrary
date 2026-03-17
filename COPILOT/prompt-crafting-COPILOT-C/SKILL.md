@@ -15,36 +15,75 @@ metadata:
 ---
 
 # Purpose
-Writes, rewrites, or improves agent prompts, system instructions, command descriptions, and output templates to produce more reliable, accurate, and consistent agent behaviour.
+Writes, rewrites, or improves prompts to produce reliable, consistent agent behavior. Applies prompt engineering principles: clear role assignment, explicit constraints, structured output format, few-shot examples where needed, and evidence anchoring.
 
 # When to use this skill
 Use when:
-- The user says "write a prompt for X", "improve this prompt", "why is this agent producing bad output?"
-- An agent instruction is vague, producing inconsistent results, or drifting from intended behaviour
-- A new command, tool, or workflow needs its prompt written from scratch
-- An existing AGENTS.md, COMMANDS.md, or skill description needs sharpening
+- User says "write a prompt for X", "improve this prompt", "fix this agent", "why is this producing bad output"
+- Agent instruction is vague, inconsistent, hallucinating, or drifting from intended behavior
+- New command, tool, or workflow needs its prompt written from scratch
+- Existing AGENTS.md, tool description, or system prompt needs sharpening
 
 Do NOT use when:
-- The user wants to write a SKILL.md (use `skill-authoring`)
-- The problem is the tool itself, not the prompt
-- The agent is working correctly — no change needed
+- User wants to write a full SKILL.md with frontmatter/evals (use `skill-authoring`)
+- Problem is the tool's implementation, not the prompt
+- Agent works correctly—no change needed
 
 # Operating procedure
-1. **Identify the prompt type**: System instruction, user-facing command description, tool description, output template, or routing description — each has different optimisation targets
-2. **State the intended behaviour**: What should the agent do when this prompt fires? Write it in one sentence
-3. **Diagnose the current prompt** (if rewriting): What specific failure mode is occurring? (Scope drift? Wrong output format? Hallucination? Under-triggering?)
-4. **Apply prompt structure principles**:
-   - **Role first**: State who the agent is and what it is responsible for before giving instructions
-   - **Constraint before freedom**: State what the agent must NOT do before stating what it can do
-   - **Specify output format**: If the output needs a specific shape, describe it with an example or schema
-   - **Use positive imperatives**: "Always do X" rather than "Try to do X" or "You might want to do X"
-   - **Anchor to evidence**: If the agent should cite, quote, or check sources, state this explicitly
-5. **For routing/trigger text** (skill descriptions, tool descriptions): Start with the most discriminating signal word or phrase. State "Use when: [specific trigger]" and "Do NOT use when: [common confusion case]"
-6. **Test the prompt against failure cases**: Does the rewritten prompt prevent the failure mode identified in step 3? Walk through the scenario mentally
-7. **Remove filler**: Eliminate "please", "try to", "it would be ideal if", and any sentence that does not constrain or instruct behaviour
+1. **Identify prompt type** (each has different optimization targets):
+   - **System prompt**: Sets role, constraints, general behavior
+   - **Tool description**: Routing logic—when to invoke, what it does
+   - **User-facing command**: What human types to trigger action
+   - **Output template**: Exact format of response
+2. **State intended behavior in one sentence**: "When triggered, the agent should [specific action] and return [specific output]"
+3. **Diagnose current failure** (if rewriting):
+   - Scope drift? (does more/less than intended)
+   - Wrong format? (structured vs prose, missing sections)
+   - Hallucination? (invents facts, cites nonexistent sources)
+   - Under-triggering? (doesn't fire when it should)
+   - Over-triggering? (fires when it shouldn't)
+4. **Apply core prompt engineering principles**:
+   - **Role first**: "You are a [specific role] responsible for [specific scope]"
+   - **Constraint before freedom**: State what NOT to do before what to do
+   - **Positive imperatives**: "Always X" not "Try to X" or "You might want to X"
+   - **Explicit output format**: Show example or schema, use XML tags for structure
+   - **Evidence anchoring**: "Quote the relevant section before answering" if citing needed
+5. **Add few-shot examples** (when format is complex or behavior is subtle):
+   - 3-5 examples covering normal case + edge cases
+   - Wrap in `<example>` tags to separate from instructions
+   - Make examples diverse to avoid overfitting
+6. **For routing/trigger text**:
+   - Lead with most discriminating signal word
+   - Include "Use when: [specific triggers]"
+   - Include "Do NOT use when: [common confusion cases]"
+7. **Remove filler**: Cut "please", "try to", "it would be ideal if", "you may want to consider"
+8. **Test mentally**: Walk through the failure case from step 3—does the new prompt prevent it?
 
 # Output defaults
-The rewritten prompt, preceded by a **Change Summary** explaining what was changed and why. If the prompt was rewritten for a specific failure mode, include a **Before / After** comparison.
+```
+## Change Summary
+[What was changed and why, 2-3 sentences]
+
+## Before
+[Original prompt if rewriting]
+
+## After
+[New prompt]
+
+## Rationale
+- [Specific change 1]: [Why it helps]
+- [Specific change 2]: [Why it helps]
+```
+
+For new prompts, omit "Before" section.
+
+# References
+- https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview — Anthropic prompt engineering guide
+- https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/claude-prompting-best-practices — detailed best practices
+- Key techniques: XML structuring, role prompting, few-shot examples, chain-of-thought, explicit constraints
 
 # Failure handling
-If the intended behaviour cannot be determined, list the three questions that must be answered before the prompt can be written (who uses it, what output is expected, what failure to prevent).
+- **Intended behavior unknown**: Return three questions: "Who uses this?", "What output is expected?", "What failure mode should this prevent?"
+- **Multiple conflicting goals**: Split into separate prompts or use conditional structure
+- **Prompt too long**: Extract reference material to separate file, keep core instructions concise
+- **Can't reproduce failure**: Ask for specific input that caused the problem

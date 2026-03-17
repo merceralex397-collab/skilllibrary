@@ -15,40 +15,92 @@ metadata:
 ---
 
 # Purpose
-Moves large embedded content (schemas, examples, reference tables, long glossaries) out of the SKILL.md body into a `references/` folder so the skill body remains focused and the references are available for progressive disclosure when needed.
+Extracts large reference material (docs, schemas, examples, tables) from SKILL.md into references/ directory. Keeps core skill concise while making detail available on demand—progressive disclosure.
 
 # When to use this skill
 Use when:
-- A SKILL.md file is longer than 200 lines because it contains large examples, schemas, or reference tables inline
-- The user says "extract references from this skill", "move the examples out", or "slim down this skill"
-- A skill body is hard to read because reference content drowns out the operating procedure
-- A skill's examples or schemas need to be shared with other skills
+- SKILL.md >500 lines or >10KB
+- Contains large code examples, schemas, lookup tables
+- User says "this is too long", "extract references", "slim down"
+- Detailed appendix not needed every invocation
+- Multiple skills could share reference material
 
 Do NOT use when:
-- The skill body is the right length and has no large embedded content to extract
-- The "large" content is actually the operating procedure itself — do not extract steps into references
-- The skill is small enough that a `references/` folder would be over-engineering
+- Skill already concise (<200 lines)
+- "Reference" is actually core procedure
+- Material small (<50 lines)
+- Extraction would break flow
 
 # Operating procedure
-1. **Identify extraction candidates**: In the SKILL.md body, flag:
-   - Inline schemas or data structures longer than 10 lines
-   - Inline examples longer than 15 lines
-   - Reference tables that are looked up rather than read procedurally
-   - Glossary sections longer than 8 entries
-   - Any embedded document that is cited rather than read as part of the procedure
-2. **Create the `references/` directory**: `SKILLNAME/references/`
-3. **For each extraction candidate**:
-   - Create a named file in `references/`: `SKILLNAME/references/CONTENT-NAME.md` (or `.json`, `.yaml` as appropriate)
-   - Move the content verbatim into the reference file
-   - Add a header to the reference file: `# [Title]` and a one-line description of what this reference is for
-4. **Replace the extracted content in SKILL.md**: Replace the inline content with a short reference pointer:
-   - Example: "See `references/output-schema.json` for the full output format"
-   - Example: "Example input/output pairs are in `references/examples.md`"
-5. **Verify the skill body is still complete**: The operating procedure must still be fully executable from SKILL.md alone. References are supplements, not required reading for the procedure
-6. **Update the manifest** (`manifest.json` if it exists): Add the new reference files to the `files` list
+1. **Identify extraction candidates**:
+   - Code examples >20 lines
+   - Schema definitions
+   - Lookup tables/mappings
+   - API documentation excerpts
+   - Configuration templates
+   - Extended case studies
+2. **Assess each**:
+   - Needed every invocation? → Keep inline
+   - Reference/lookup material? → Extract
+   - Shared across skills? → Extract to shared location
+3. **Create references/ structure**:
+   ```
+   skill-name/
+   ├── SKILL.md
+   └── references/
+       ├── README.md
+       ├── schema.json
+       ├── examples/
+       │   ├── basic.md
+       │   └── advanced.md
+       └── api-docs.md
+   ```
+4. **Extract each piece**:
+   - Move to appropriate file
+   - Name descriptively
+   - Preserve formatting
+5. **Add pointers in SKILL.md**:
+   - "See references/schema.json for full schema"
+   - Or: `<!-- @include references/schema.json -->`
+   - Keep 1-2 line summary
+6. **Create references/README.md**:
+   ```markdown
+   # References
+   | File | Contents | When to use |
+   |------|----------|-------------|
+   | schema.json | API schema | Validating responses |
+   ```
+7. **Verify completeness**:
+   - Skill understandable without references?
+   - Procedure steps present?
+   - References signposted?
 
 # Output defaults
-Modified SKILL.md with reference pointers, a populated `references/` directory with named reference files, and a **Extraction Summary** listing what was moved and why.
+```
+## Reference Extraction: [skill]
+
+### Extracted
+| Content | From | To | Size |
+|---------|------|-----|------|
+| Schema | L150-300 | references/schema.json | 5KB |
+
+### Reduction
+- Before: 850 lines, 25KB
+- After: 280 lines, 8KB
+- Reduction: 67%
+
+### Verification
+- [x] Procedure intact
+- [x] References signposted
+- [x] README created
+```
+
+# References
+- Anthropic skill structure
+- Progressive disclosure principles
 
 # Failure handling
-If removing the content makes the operating procedure incomplete or ambiguous, the content is part of the procedure, not a reference. Do not extract it. Document this distinction.
+- **Can't determine what to extract**: If doubt, keep inline
+- **Would break skill**: Material is procedural—leave inline
+- **Circular references**: Flatten structure
+- **Shared conflict**: Create skill-specific copy

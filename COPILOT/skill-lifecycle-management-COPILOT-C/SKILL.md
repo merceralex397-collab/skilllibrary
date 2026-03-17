@@ -15,36 +15,75 @@ metadata:
 ---
 
 # Purpose
-Manages a skill through its full lifecycle: from initial creation through active use, revision, deprecation, and eventual archival — ensuring the library stays coherent and that retired skills do not silently break dependent workflows.
+Manages skills through their full lifecycle: draft → beta → stable → deprecated → archived. Ensures library stays coherent, retired skills don't break workflows, and maturity states reflect reality.
 
 # When to use this skill
 Use when:
-- The user says "manage the lifecycle of this skill", "what state is this skill in?", or "how do we retire this skill properly?"
-- A library audit has produced lifecycle actions (from `skill-catalog-curation`) that need to be executed
-- A skill is being promoted, revised, or retired and the lifecycle state needs to be updated correctly
-- A long-running project needs to track which skills are active, deprecated, or archived
+- User says "manage lifecycle", "what state is this?", "how do we retire properly?"
+- Library audit produced lifecycle actions needing execution
+- Skill being promoted, revised, or retired
+- Long-running project needs to track active/deprecated/archived
 
 Do NOT use when:
-- The user wants to deprecate one specific skill (use `skill-deprecation-manager` for that focused workflow)
-- The user wants to author a new skill (use `skill-authoring`)
-- The library has fewer than 15 skills — lightweight lifecycle tracking is sufficient (just a `maturity` field)
+- Deprecating one specific skill (use `skill-deprecation-manager`)
+- Authoring new skill (use `skill-authoring`)
+- Library <15 skills—lightweight tracking sufficient
 
 # Operating procedure
-1. **Define the lifecycle states** for the library (customise if the library has different conventions):
-   - `draft`: Being written, not yet validated — do not rely on in production
-   - `beta`: Validated for basic use cases, accepting feedback — use with monitoring
-   - `stable`: Validated, promoted, default choice for new installations
-   - `deprecated`: Replaced by a newer skill or no longer recommended — still functional but do not use for new work
-   - `archived`: Removed from active library, kept for reference only — do not install
-2. **Audit current states**: List every skill with its current maturity field. Flag inconsistencies (skills that have been in `draft` for more than 2 release cycles, skills in `stable` with known bugs)
-3. **Apply promotion criteria**: A skill moves from `draft` → `beta` when: it has been tested with at least 3 real prompts and passed. From `beta` → `stable` when: it has been evaluated (from `skill-evaluation`) with a "Promote" verdict
-4. **Apply deprecation criteria**: A skill should be deprecated when: a better replacement exists, or it has not been used in 3+ release cycles, or it consistently fails evaluation
-5. **Execute state transitions**: For each skill being transitioned, update the `metadata.maturity` field in frontmatter and add a lifecycle event to `PROVENANCE.md` (or create one)
-6. **Notify dependent workflows**: If a skill being deprecated is referenced in AGENTS.md, commands, or other skills, flag those references as needing update
-7. **Update the library index**: Reflect the new states in any catalog or index file
+1. **Define lifecycle states**:
+   - `draft`: Being written, not validated—don't use in production
+   - `beta`: Validated for basics, accepting feedback—use with monitoring
+   - `stable`: Validated, promoted, default choice
+   - `deprecated`: Replaced/not recommended—functional but don't use for new work
+   - `archived`: Removed from active, reference only—don't install
+2. **Audit current states**:
+   - List skills with maturity field
+   - Flag: draft >2 cycles, stable with bugs
+3. **Apply promotion criteria**:
+   - draft → beta: Tested with 3+ real prompts, passed
+   - beta → stable: Evaluated with "Promote" verdict
+4. **Apply deprecation criteria**:
+   - Better replacement exists
+   - Unused 3+ cycles
+   - Consistently fails evaluation
+5. **Execute transitions**:
+   - Update `metadata.maturity`
+   - Add event to PROVENANCE.md
+6. **Notify dependents**:
+   - If deprecated referenced in AGENTS.md, commands, skills—flag for update
+7. **Update library index**
 
 # Output defaults
-A **Lifecycle Audit** table (skill | current state | recommended state | reason), a list of **State Transitions to Execute**, and a **Dependency Impact** list for any skill being deprecated.
+```
+## Lifecycle Audit
+
+### State Summary
+| State | Count | Skills |
+|-------|-------|--------|
+| draft | 5 | skill-a, skill-b, ... |
+| stable | 20 | ... |
+
+### Recommended Transitions
+| Skill | Current | Recommended | Reason |
+|-------|---------|-------------|--------|
+| skill-x | draft | beta | 5 tests passed |
+| skill-y | stable | deprecated | Superseded |
+
+### Dependency Impact
+| Deprecated | Referenced By | Action |
+|------------|---------------|--------|
+| skill-y | AGENTS.md L45 | Update reference |
+
+### Actions
+1. Promote skill-x to beta
+2. Deprecate skill-y, update AGENTS.md
+```
+
+# References
+- Library index/catalog
+- Individual skill frontmatter
 
 # Failure handling
-If lifecycle states are not currently tracked in frontmatter, add the `maturity` field to all skills based on best-available evidence before proceeding with lifecycle management.
+- **Maturity not tracked**: Add `maturity` field to all skills based on evidence before proceeding
+- **Circular dependencies on deprecated skill**: Create replacement first
+- **Disputed maturity**: Default to more conservative state

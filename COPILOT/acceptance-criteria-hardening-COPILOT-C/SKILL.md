@@ -15,35 +15,93 @@ metadata:
 ---
 
 # Purpose
-Converts vague, subjective, or incomplete acceptance criteria into observable, testable, and decision-complete statements that an agent or tester can evaluate without human interpretation.
+Converts vague, subjective, or incomplete acceptance criteria into observable, testable, decision-complete statements using BDD's Given/When/Then format. This skill applies Dan North's Behaviour-Driven Development insight: acceptance criteria are scenarios, and scenarios should be executable. An agent or tester should be able to verify each criterion without human interpretation.
 
 # When to use this skill
 Use when:
-- The user says "harden these AC", "make these testable", or "are these criteria good enough?"
-- A ticket has acceptance criteria that contain words like "works correctly", "is fast", "looks good", or "handles errors"
+- The user says "harden these AC", "make these testable", "are these criteria good enough?", or "write Given/When/Then"
+- A ticket has acceptance criteria containing words like "works correctly", "is fast", "looks good", "handles errors", or "is user-friendly"
 - An agent is expected to self-evaluate completion and needs unambiguous criteria
-- A QA or review cycle is about to start and criteria need to be clear before work is assessed
+- A QA or review cycle is about to start and criteria need to be clear before assessment
+- Ticket refinement or backlog grooming sessions
 
 Do NOT use when:
-- No acceptance criteria exist yet (write them from scratch using `planning` skill first)
-- The criteria are already observable and testable — nothing to improve
-- The scope of the ticket is unclear — fix scope first
+- No acceptance criteria exist yet (write them from scratch first)
+- The criteria are already observable and testable—nothing to improve
+- The scope of the ticket is unclear—fix scope first before hardening criteria
+- The user wants to verify implementation against criteria (use `drift-detection`)
 
 # Operating procedure
-1. **Identify vague language patterns**: Scan each criterion for: subjective adjectives ("good", "clean", "fast"), undefined comparatives ("faster than before"), passive ambiguity ("errors are handled"), and scope gaps (what does "complete" mean for this feature?)
-2. **For each vague criterion, apply the SMART rewrite**:
-   - **Specific**: What exact behaviour, output, or state must be observable?
-   - **Measurable**: What is the threshold? (latency in ms, error rate in %, count of items)
-   - **Actor-explicit**: Who does the action that triggers the criterion? (user, system, agent)
-   - **Result-explicit**: What is the observable outcome? (what appears, what is stored, what is returned)
-   - **Test-able**: Could a script or checklist verify this without human judgement? If not, rewrite until it can
-3. **Add negative cases**: For each criterion, add one "does NOT" statement — what the system must NOT do under the same conditions (e.g. "does not show spinner for >500ms")
-4. **Add edge cases**: For each criterion, identify the most important boundary condition and add it explicitly (empty input, max load, invalid data)
-5. **Check completeness**: Are there implicit "done" states that are not covered by any criterion? Add them
-6. **Flag decision gaps**: If a criterion requires a product decision that has not been made (e.g. "what counts as a successful import?"), mark it as **Needs Decision** rather than guessing
+1. **Identify vague language patterns**: Scan each criterion for:
+   - Subjective adjectives: "good", "clean", "fast", "user-friendly", "intuitive"
+   - Undefined comparatives: "faster than before", "better than current"
+   - Passive ambiguity: "errors are handled", "data is processed"
+   - Scope gaps: what does "complete" mean? what counts as "success"?
+   - Hidden actors: who does the action? what triggers the behavior?
+
+2. **For each vague criterion, rewrite using Given/When/Then**:
+   
+   **Given** [a specific precondition or context]
+   **When** [a specific action or event occurs]
+   **Then** [a specific observable outcome]
+
+   The Given establishes context. The When is the trigger. The Then is what a test would assert.
+
+3. **Apply testability requirements**:
+   - **Specific**: What exact behavior, output, or state must be observable?
+   - **Measurable**: What is the threshold? (latency in ms, error rate in %, count of items, size in bytes)
+   - **Actor-explicit**: Who or what performs the action? (user, system, scheduled job, API caller)
+   - **Outcome-explicit**: What appears, what is stored, what is returned, what changes?
+   - **Automatable**: Could a script verify this without human judgment?
+
+4. **Add negative scenarios**: For each criterion, add what must NOT happen:
+   - "Then the system does NOT display a loading spinner for more than 500ms"
+   - "Then no error is logged"
+   - "Then the previous data is NOT deleted"
+
+5. **Add boundary conditions**: For each criterion, identify the most important edge case:
+   - Empty input: What happens with zero items?
+   - Maximum load: What happens at the upper limit?
+   - Invalid data: What happens with malformed input?
+   - Concurrent access: What happens with simultaneous requests?
+
+6. **Check decision completeness**: Are there implicit decisions that must be made before this criterion can be evaluated?
+   - "What counts as a 'valid' user?"
+   - "What is the timeout threshold?"
+   - "Which error cases return 4xx vs 5xx?"
+   
+   If the criterion requires a product decision not yet made, mark it **Needs Decision**.
 
 # Output defaults
-The original criteria followed by the hardened rewrite for each, using a before/after format. A **Decision Gaps** list for items that cannot be hardened without product input.
+For each original criterion, output:
+
+**Original**: [the vague criterion as written]
+
+**Hardened**:
+```gherkin
+Given [precondition]
+When [action]
+Then [observable outcome]
+And [additional assertions if needed]
+```
+
+**Edge cases**:
+- [Boundary condition scenario]
+
+**Negative case**:
+- [What must NOT happen]
+
+End with a **Decision Gaps** list for items that cannot be hardened without product input.
+
+# References
+- https://dannorth.net/blog/introducing-bdd/ — Dan North's original BDD article introducing Given/When/Then
+- Cucumber/Gherkin syntax — standard format for executable specifications
+- Specification by Example (Adzic, 2011) — comprehensive guide to testable requirements
 
 # Failure handling
-If the ticket scope is undefined, the AC cannot be meaningfully hardened. State which scope definition is needed before rewriting.
+If the ticket scope is undefined:
+1. State that criteria cannot be meaningfully hardened without clear scope
+2. List the scope questions that must be answered first
+3. Provide example hardened criteria conditional on scope answers
+
+If criteria reference undefined terms, flag each term and request definitions.

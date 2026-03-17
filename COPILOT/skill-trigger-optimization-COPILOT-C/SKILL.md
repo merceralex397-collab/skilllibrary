@@ -15,37 +15,82 @@ metadata:
 ---
 
 # Purpose
-Rewrites a skill's description, trigger phrases, and routing language to increase trigger recall (the skill fires when it should) while maintaining precision (it does not fire when it should not).
+Fixes skill routing problems by rewriting the description field and "When to use" triggers. The description is routing logic—it determines when a host invokes the skill. Bad descriptions cause undertriggering (doesn't fire when should) or overtriggering (fires when shouldn't).
 
 # When to use this skill
 Use when:
-- A skill exists but is consistently not being invoked on appropriate prompts (undertriggering)
-- A skill is firing on prompts that should route to a different skill (overtriggering)
-- The user says "this skill never triggers", "why isn't this skill being used?", or "the skill fires too often"
-- A skill evaluation (from `skill-evaluation`) shows poor routing accuracy
+- Skill isn't triggering when it should (undertriggering)
+- Skill is triggering when it shouldn't (overtriggering, false positives)
+- User says "why isn't this skill being used?", "wrong skill fired", "fix the triggers"
+- Eval shows poor routing accuracy (low precision or recall)
+- Description is vague, generic, or reads like marketing copy
 
 Do NOT use when:
-- The skill's procedure is broken — fix the skill body, not just the trigger
-- The skill is triggering correctly and the issue is output quality
-- The frontmatter description is the only problem and the skill body is fine — just rewrite the description
+- Skill triggers correctly but output wrong (use `skill-refinement`)
+- Creating new skill (use `skill-authoring`)
+- Entire skill needs rewrite (use `skill-authoring`)
+- Problem is procedure, not routing
 
 # Operating procedure
-1. **Diagnose the trigger failure mode**:
-   - **Undertrigger**: The description is too narrow, uses jargon the user would not use, or requires the user to know the skill exists
-   - **Overtrigger**: The description is too broad, overlaps with a sibling skill, or lacks discriminating language
-2. **Collect 5 real or realistic prompts** that should trigger this skill — write them as a user would actually phrase the request
-3. **Read the current description through a routing model's lens**: Would a routing model, reading only the description, select this skill for each of those 5 prompts?
-4. **Rewrite the frontmatter description** using these rules:
-   - Lead with the most discriminating signal words (the specific verbs/nouns that distinguish this skill from similar ones)
-   - Include 2–3 natural-language trigger phrases a user would actually say, in quotes
-   - State the primary use case in the first sentence — not a capability statement but a trigger statement
-   - Keep it under 60 words
-5. **Rewrite the "When to use" section**: Each bullet must be a specific phrase or condition. Replace "when the user or repo work clearly involves X" with "when the user says 'X'" or "when [specific observable condition]"
-6. **Update "Do NOT use when"**: Ensure it names the correct alternative skill for each confusion case
-7. **Verify the rewrite against the 5 test prompts**: Would the new description correctly route all 5?
+1. **Diagnose the routing problem**:
+   - **Undertriggering**: What phrases should trigger but don't? List 3-5
+   - **Overtriggering**: What triggered but shouldn't? What should have?
+   - **Confusion**: Which skill being confused? What distinguishes them?
+2. **Analyze current description**:
+   - Is first phrase most discriminating signal?
+   - Does it mention trigger words users actually say?
+   - Does it describe what skill produces?
+   - Does it have "Do NOT use when" anti-triggers?
+3. **Identify discriminating signals**:
+   - What words/phrases ONLY appear when this skill should trigger?
+   - What context signals indicate this skill?
+   - What's minimal set that reliably indicates this skill?
+4. **Rewrite the description**:
+   - **First phrase**: Most discriminating signal (verb + specific object)
+   - **Include**: Specific trigger phrases users say
+   - **Include**: What skill produces/does
+   - **Avoid**: Generic ("helps with", "assists in")
+   - **Avoid**: Marketing ("powerful", "comprehensive")
+5. **Add explicit anti-triggers**:
+   - "Do NOT use when: [confusion case] (use `alternative` instead)"
+   - Cover most common false positive scenarios
+6. **Test the new description**:
+   - Would undertriggering phrases now match?
+   - Would overtriggering phrases now NOT match?
+   - Still risk of confusion?
 
 # Output defaults
-The rewritten frontmatter description and updated "When to use" / "Do NOT use when" sections, with a **Trigger Test Results** table showing the 5 test prompts and whether the new description routes them correctly.
+```
+## Trigger Optimization: [skill-name]
+
+### Problem
+[Undertriggering | Overtriggering | Confusion]
+Examples: [problematic inputs]
+
+### Analysis
+- Current first phrase: "[current]"
+- Missing trigger words: [list]
+- Overly generic terms: [list]
+
+### Rewritten Description
+**Before**: "[current]"
+**After**: "[new with specific triggers]"
+
+### Anti-triggers Added
+- Do NOT use when: [case] (use `skill-x`)
+
+### Verification
+- [ ] Undertriggering cases now match
+- [ ] Overtriggering cases now don't match
+- [ ] No new confusion
+```
+
+# References
+- Similar skills in catalog for differentiation
+- Trigger test results if available
 
 # Failure handling
-If the skill's scope is itself ambiguous (it tries to do two different things), the trigger cannot be optimised until the scope is resolved. Recommend `skill-variant-splitting` before optimising.
+- **Can't identify discriminating signals**: Skill may be too broad—recommend `skill-variant-splitting`
+- **Every fix causes new false positives**: Overlapping scope—redesign boundaries
+- **No usage data**: Create synthetic tests, optimize against those
+- **Genuine overlap with another skill**: Consider merging or explicit routing rules

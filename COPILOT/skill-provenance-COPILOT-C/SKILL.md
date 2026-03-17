@@ -15,35 +15,94 @@ metadata:
 ---
 
 # Purpose
-Documents a skill's origin, the evidence or reasoning that informed each design decision, and the assumptions it encodes — so future maintainers know why the skill works the way it does and what would need to change if context changes.
+Documents origin, authorship, evidence basis, and assumptions of a skill. Provenance prevents skills from becoming mysterious prompt blobs—answers "where did this come from, why written this way, can we trust it?"
 
 # When to use this skill
 Use when:
-- The user says "document the provenance of this skill", "where did this skill come from?", or "what assumptions does this skill make?"
-- A skill was created without documentation and its reasoning is opaque
-- A skill is being promoted from draft to stable and requires documented evidence of its design basis
-- An audit of a skill library needs traceable origins for compliance or quality purposes
+- User says "where did this come from?", "document origin", "add provenance"
+- Creating official skill for sharing/publishing
+- Auditing library for trust and traceability
+- Skill imported from external source needs attribution
+- Skill encodes non-obvious assumptions needing documentation
 
 Do NOT use when:
-- The skill is brand new and provenance documentation can be written inline during authoring
-- The goal is to evaluate the skill's quality (use `skill-evaluation`)
-- The goal is to track changes over time rather than document origins (use git history instead)
+- Skill is trivial and provenance overkill
+- Just need git history (built-in)
+- Want skill evaluation (use `skill-evaluation`)
 
 # Operating procedure
-1. **Identify the origin category**: Was this skill:
-   - **Created from scratch** (author reasoning from first principles)
-   - **Adapted from a source** (based on an existing pattern, framework, or document — name it)
-   - **Derived from observations** (built from watching real usage patterns — describe the pattern)
-   - **Ported from another library** (name the source repo and original author)
-2. **Document the design decisions**: For each major structural choice in the skill (why this number of steps, why these specific trigger phrases, why this output format), write one sentence explaining the reasoning
-3. **List the evidence base**: What data, usage observations, user feedback, or cited sources informed the skill? If none exists, state "No evidence base — authored from first principles"
-4. **Name the assumptions explicitly**: What does the skill assume about the user, the context, the tooling, or the agent that is not stated in the operating procedure?
-5. **Record the validation history**: Has the skill been tested? How? Against what prompts? What were the results? If not tested, state that
-6. **Write a `PROVENANCE.md`** in the skill folder with the above sections: Origin, Design Decisions, Evidence Base, Assumptions, Validation History
-7. **Update the frontmatter `source` field** if the origin is a specific document, repo, or author
+1. **Document origin**:
+   - Source URL if adapted
+   - "created" if from scratch
+   - If derived: % original vs adapted
+2. **Record authorship**:
+   - Original author(s)
+   - Adapter(s) if modified
+   - Reviewer(s) if reviewed
+   - Dates
+3. **Document evidence basis**:
+   - What documentation informed procedure?
+   - What best practices referenced?
+   - What expert knowledge encoded?
+   - What failures learned from?
+4. **Catalog assumptions**:
+   - What must be true for skill to work?
+   - What environment/context assumed?
+   - What tool versions targeted?
+   - What conventions expected?
+5. **Assess trust level**:
+   - **High**: Official, reviewed, tested, maintained
+   - **Medium**: Known source, some testing
+   - **Low**: Unknown source, unreviewed
+   - **Untrusted**: External, not reviewed
+6. **Record change history**:
+   - Major revisions with rationale
+   - Breaking changes
+   - Deprecation of approaches
+7. **Update frontmatter**
 
 # Output defaults
-A `PROVENANCE.md` file in the skill folder with sections: Origin, Design Decisions, Evidence Base, Assumptions, and Validation History.
+In SKILL.md frontmatter:
+```yaml
+metadata:
+  provenance:
+    origin: "https://..."
+    adaptation: 30%
+    trust: high
+```
+
+PROVENANCE.md:
+```markdown
+# Provenance
+
+## Origin
+- **Source**: [URL or "created"]
+- **Author**: [name]
+- **Adapted by**: [name] on [date]
+
+## Evidence Basis
+- [URL] — informed steps 1-3
+- [guide] — informed format
+
+## Assumptions
+- Unix environment
+- Node.js 18+
+- npm as package manager
+
+## Trust Level: [High]
+Rationale: [why]
+
+## Change History
+| Date | Change | Author | Why |
+|------|--------|--------|-----|
+```
+
+# References
+- Git history
+- Original source documentation
 
 # Failure handling
-If the skill's original author or design reasoning cannot be recovered, document it as **Unknown** for those sections rather than guessing. State the date the provenance was reconstructed and by whom.
+- **Source unknown**: Mark "unknown", trust Low, recommend review
+- **Assumptions undocumentable**: Flag risk
+- **Multiple sources**: Document all, note precedence
+- **Author unreachable**: Document what's known, mark gaps

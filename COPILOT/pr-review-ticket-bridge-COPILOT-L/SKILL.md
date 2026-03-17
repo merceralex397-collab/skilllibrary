@@ -15,38 +15,164 @@ metadata:
 ---
 
 # Purpose
-Transform validated PR review findings into guarded follow-up tickets — ensuring only real, code-verified issues become backlog items, not every passing comment.
+Validates PR review comments against actual implementation, then generates follow-up tickets only for findings that survive evidence-based triage. Prevents review comments from becoming unchecked backlog noise by requiring each finding to have verified evidence before ticket creation.
 
 # When to use this skill
 Use when:
-- A PR review has returned and findings need to be converted to actionable tickets
-- An automated code review (e.g., from a code-review agent) has produced findings
-- The user says "create tickets from the PR review" or "what follow-up work came out of the review?"
-- A merged PR had non-blocking issues that should be tracked for future sprints
+- A PR has been reviewed and has comments that need action
+- Converting review feedback into tracked work items
+- Closing a review cycle and capturing remaining work
 
 Do NOT use when:
-- The PR is still open and blocking issues need to be fixed before merge (fix them, don't ticket them)
-- The review has zero findings
-- The findings are already in the backlog
+- The review is in progress (wait for completion)
+- All comments were addressed in the PR (nothing to bridge)
+- Comments are discussions, not action items
 
 # Operating procedure
-1. **Read the review source**: PR comments, code-review agent output, or audit report
-2. **Validate each finding against current code** (not the diff — against HEAD):
-   - Look up the referenced file and line
-   - Confirm the issue still exists in current state
-   - If the finding is stale (already fixed or file removed), discard it
-3. **For each validated finding, classify**:
-   - `bug` — incorrect behavior
-   - `security` — vulnerability or data exposure
-   - `tech-debt` — suboptimal but not broken
-   - `enhancement` — suggested improvement
-4. **Create ticket files** only for `bug` and `security` findings (P0/P1)
-5. **Batch `tech-debt` and `enhancement` findings** into a single `TECH-DEBT-BATCH` ticket with a checklist
-6. **Each ticket must include**: finding text, file:line evidence, acceptance criteria, and link back to PR
-7. **Update MANIFEST.json and BOARD.md** to include new tickets
+
+## 1. Collect review comments
+```bash
+# From GitHub
+gh pr view [PR_NUMBER] --comments --json reviews,comments
+
+# Or from local review file
+cat reviews/PR-[NUMBER]-review.md
+```
+
+## 2. Categorize comments
+For each comment, determine type:
+- **Must Fix**: Blocking issue that must be addressed
+- **Should Fix**: Important but not blocking
+- **Consider**: Suggestion for improvement
+- **Discussion**: Question or conversation (no action needed)
+- **Resolved**: Already addressed in PR
+
+## 3. Validate "Must Fix" and "Should Fix" against code
+For each actionable comment:
+```markdown
+### Comment: [summary]
+**Reviewer claim:** [what they said]
+**Code location:** [file:line]
+
+**Validation:**
+- [ ] Code at location still exists
+- [ ] Issue described is actually present
+- [ ] No subsequent commit addressed this
+
+**Verdict:** [VALID | INVALID | OUTDATED]
+```
+
+Reasons to invalidate:
+- Code was already fixed in later commit
+- Comment misunderstood the code
+- Underlying assumption was wrong
+
+## 4. Triage validated findings
+For each VALID finding, assess:
+```markdown
+**Impact:** [high | medium | low]
+**Effort:** [small | medium | large]
+**Blocks release:** [yes | no]
+
+**Decision:** [CREATE_TICKET | ADDRESS_NOW | DEFER | WONTFIX]
+```
+
+Decision matrix:
+| Impact | Effort | Blocks? | Decision |
+|--------|--------|---------|----------|
+| high | small | yes | ADDRESS_NOW |
+| high | large | yes | CREATE_TICKET (P0) |
+| high | any | no | CREATE_TICKET (P1) |
+| medium | small | no | ADDRESS_NOW or DEFER |
+| low | any | no | DEFER or WONTFIX |
+
+## 5. Generate tickets for CREATE_TICKET items
+For each ticket-worthy finding:
+```markdown
+---
+id: TKT-[NEXT]
+title: [action] from PR #[NUMBER] review
+status: todo
+priority: [P0|P1|P2]
+source: PR-[NUMBER]-review
+created: [ISO date]
+---
+
+# TKT-[NEXT]: [Title]
+
+## Origin
+PR #[NUMBER] review comment by [reviewer]
+Original comment: "[quote]"
+
+## Description
+[Expanded description of what needs to be done]
+
+## Acceptance Criteria
+- [ ] [Specific criterion based on review comment]
+- [ ] [Verification that addresses reviewer concern]
+
+## Context
+- PR: #[NUMBER]
+- File: [file:line]
+- Reviewer: [name]
+```
+
+## 6. Update PR with triage results
+Comment on PR summarizing triage:
+```markdown
+## Review Triage Summary
+
+### Addressed in PR
+- [Comment 1]: Fixed in commit [sha]
+
+### Tickets Created
+- TKT-XXX: [title] (P1)
+- TKT-YYY: [title] (P2)
+
+### Deferred
+- [Comment]: Reason for deferral
+
+### Won't Fix
+- [Comment]: Rationale
+```
+
+## 7. Close review cycle
+```bash
+# Approve PR if all blocking items addressed
+gh pr review [PR_NUMBER] --approve --body "All blocking items addressed. Non-blocking items tracked in tickets."
+
+# Or request changes if blockers remain
+gh pr review [PR_NUMBER] --request-changes --body "Blocking items remain: [list]"
+```
 
 # Output defaults
-Individual ticket files for bugs/security + one batch ticket for tech-debt. MANIFEST.json updated.
+```markdown
+# PR Review → Ticket Bridge Report
+PR: #[NUMBER]
+Date: [ISO date]
+
+## Summary
+- Comments received: N
+- Validated as issues: N
+- Tickets created: N
+- Addressed in PR: N
+- Deferred: N
+
+## Tickets Created
+| ID | Title | Priority | Source Comment |
+|----|-------|----------|----------------|
+| TKT-XXX | [title] | P1 | [reviewer]: "[snippet]" |
+
+## Full Triage
+[Detailed breakdown per comment]
+```
+
+# References
+- GitHub PR review workflow: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/about-pull-request-reviews
+- Review statuses: Comment, Approve, Request Changes
 
 # Failure handling
-If the PR source cannot be read, request the review output be pasted directly. Do not create tickets from memory or inference.
+- **Cannot access PR comments**: Manually extract comments from GitHub web UI
+- **Comment references deleted code**: Mark as OUTDATED, do not create ticket
+- **Disagreement with reviewer**: Create ticket but flag for discussion, don't silently WONTFIX
+- **Too many comments to process**: Batch by file or severity, process in multiple passes

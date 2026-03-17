@@ -15,37 +15,231 @@ metadata:
 ---
 
 # Purpose
-Apply MCP protocol fundamentals correctly — tools, resources, prompts, transports, and auth — for both MCP server and client implementations.
+Provides Model Context Protocol (MCP) fundamentals: architecture, primitives (tools/resources/prompts), transports (stdio/HTTP+SSE), capability negotiation, and lifecycle management. Use this when building, debugging, or integrating MCP servers and clients.
 
 # When to use this skill
 Use when:
-- Implementing an MCP server (tool provider) or MCP client (tool consumer)
-- Debugging MCP communication failures (malformed messages, wrong capabilities)
-- Adding a new tool, resource, or prompt to an existing MCP server
-- Choosing between MCP transports for a new deployment
+- Building an MCP server to expose tools/resources to AI clients
+- Integrating an MCP client into an AI application
+- Debugging MCP communication issues
+- Understanding MCP capability negotiation
 
 Do NOT use when:
-- The task involves general API design unrelated to MCP (use api-schema instead)
-- The MCP server is already working and only business logic needs changing
+- Using existing MCP servers (just configure them)
+- Building non-MCP integrations
+- The project doesn't involve AI tool calling
 
 # Operating procedure
-1. **Understand the primitives**:
-   - `tools` — functions the model can call; must be deterministic, bounded, return typed results
-   - `resources` — read-only data sources (files, DB records) the model can inspect
-   - `prompts` — parameterized prompt templates the model or user can invoke
-   - `sampling` — server-initiated model calls (advanced; requires explicit client capability declaration)
-2. **Transport rules**:
-   - `stdio`: parent process spawns server; use for local tools; message framing is newline-delimited JSON
-   - `HTTP+SSE`: server at `/sse` for server→client stream, `POST /messages` for client→server; use for remote/multi-client
-   - `Streamable HTTP` (MCP 2025-03-26+): single endpoint, bidirectional; prefer for new remote deployments
-3. **Capability negotiation**: server must declare capabilities in `initialize` response; client must not call undeclared capabilities
-4. **Tool schema rules**: use JSON Schema draft 7; all parameters must have `description`; mark required fields explicitly
-5. **Auth (OAuth 2.1)**: for remote servers, implement PKCE flow; never pass tokens in tool parameters; use `Authorization: Bearer` header
-6. **Error codes**: use MCP error codes (`-32600` invalid request, `-32601` method not found, `-32603` internal) not HTTP codes in JSON-RPC responses
-7. **Versioning**: always echo the negotiated protocol version; do not assume latest
+
+## 1. Understand MCP architecture
+
+### Participants
+- **MCP Host**: AI application (Claude Desktop, VS Code, etc.) that coordinates clients
+- **MCP Client**: Component in the host that connects to one MCP server
+- **MCP Server**: Program providing tools/resources to clients
+
+```
+[AI Application (Host)]
+    ├── [MCP Client 1] ←→ [MCP Server: filesystem]
+    ├── [MCP Client 2] ←→ [MCP Server: database]
+    └── [MCP Client 3] ←→ [MCP Server: custom-tools]
+```
+
+### Layers
+- **Data layer**: JSON-RPC 2.0 protocol for messages
+- **Transport layer**: stdio (local) or HTTP+SSE (remote)
+
+## 2. MCP primitives
+
+### Tools (server → client)
+Functions that AI can invoke to perform actions:
+```json
+{
+  "name": "read_file",
+  "description": "Read contents of a file",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": { "type": "string", "description": "File path" }
+    },
+    "required": ["path"]
+  }
+}
+```
+
+Discovery: `tools/list` → Returns all available tools
+Execution: `tools/call` → Executes a specific tool
+
+### Resources (server → client)
+Data sources providing context:
+```json
+{
+  "uri": "file:///project/README.md",
+  "name": "Project README",
+  "mimeType": "text/markdown"
+}
+```
+
+Discovery: `resources/list` → Available resources
+Retrieval: `resources/read` → Get resource content
+
+### Prompts (server → client)
+Reusable interaction templates:
+```json
+{
+  "name": "summarize",
+  "description": "Summarize a document",
+  "arguments": [
+    { "name": "content", "description": "Text to summarize", "required": true }
+  ]
+}
+```
+
+Discovery: `prompts/list`
+Retrieval: `prompts/get`
+
+### Sampling (client → server)
+Server requests LLM completion from client:
+- `sampling/createMessage` → Request model completion
+- Useful for MCP servers that need AI without bundling a model
+
+### Elicitation (client → server)
+Server requests user input from client:
+- `elicitation/request` → Ask user a question
+- Returns user's response
+
+## 3. Transport options
+
+### stdio transport (local)
+- Process communication via stdin/stdout
+- No network overhead
+- Single client per server instance
+
+```bash
+# Launch MCP server via stdio
+node ./dist/server.js
+```
+
+Configuration in claude_desktop_config.json:
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path"]
+    }
+  }
+}
+```
+
+### Streamable HTTP transport (remote)
+- HTTP POST for client → server
+- Server-Sent Events for streaming
+- Multiple clients per server
+- Supports OAuth authentication
+
+## 4. Lifecycle management
+
+### Initialization sequence
+1. Client sends `initialize` with capabilities
+2. Server responds with its capabilities
+3. Client sends `initialized` notification
+4. Connection ready for requests
+
+```typescript
+// Client capabilities example
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "sampling": {}  // Client can handle sampling requests
+  },
+  "clientInfo": { "name": "my-client", "version": "1.0.0" }
+}
+
+// Server response
+{
+  "protocolVersion": "2024-11-05",
+  "capabilities": {
+    "tools": {},      // Server provides tools
+    "resources": {}   // Server provides resources
+  },
+  "serverInfo": { "name": "my-server", "version": "1.0.0" }
+}
+```
+
+### Capability negotiation
+Only use features both sides support:
+- Client wants tools → Server must have `capabilities.tools`
+- Server wants sampling → Client must have `capabilities.sampling`
+
+## 5. Building an MCP server
+
+### Minimal TypeScript server
+```typescript
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+
+const server = new Server(
+  { name: "my-server", version: "1.0.0" },
+  { capabilities: { tools: {} } }
+);
+
+// Register tool
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [{
+    name: "hello",
+    description: "Say hello",
+    inputSchema: { type: "object", properties: {} }
+  }]
+}));
+
+server.setRequestHandler(CallToolRequestSchema, async (req) => {
+  if (req.params.name === "hello") {
+    return { content: [{ type: "text", text: "Hello, world!" }] };
+  }
+  throw new Error("Unknown tool");
+});
+
+// Connect via stdio
+const transport = new StdioServerTransport();
+await server.connect(transport);
+```
+
+## 6. Fail-closed policies
+Always implement defensive behavior:
+```typescript
+// Validate all inputs
+if (!isValidPath(request.params.path)) {
+  throw new Error("Invalid path");
+}
+
+// Whitelist allowed operations
+const ALLOWED_COMMANDS = ["ls", "cat", "grep"];
+if (!ALLOWED_COMMANDS.includes(cmd)) {
+  throw new Error("Command not allowed");
+}
+
+// Set timeouts
+const result = await Promise.race([
+  executeCommand(cmd),
+  timeout(30000).then(() => { throw new Error("Timeout"); })
+]);
+```
 
 # Output defaults
-Working tool/resource/prompt handlers + capability declaration. Protocol version pinned in server config.
+MCP servers should expose:
+- `tools/list` → Array of available tools
+- `tools/call` → Tool execution results
+- Optional: `resources/list`, `resources/read`
+- Optional: `prompts/list`, `prompts/get`
+
+# References
+- MCP Introduction: https://modelcontextprotocol.io/introduction
+- MCP Architecture: https://modelcontextprotocol.io/docs/concepts/architecture
+- MCP SDK: @modelcontextprotocol/sdk
 
 # Failure handling
-If the client sends a capability the server did not declare, return `-32601` (method not found) — do not implement the capability ad hoc.
+- **Capability mismatch**: Check capabilities before using features
+- **Transport errors**: Implement reconnection for HTTP transport
+- **Tool errors**: Return structured error responses, not crashes
+- **Version mismatch**: Check protocolVersion during initialization

@@ -15,35 +15,86 @@ metadata:
 ---
 
 # Purpose
-Decides whether an overloaded skill should be split, how to split it, and what each resulting variant should contain — without losing the core procedure that made the original skill valuable.
+Determines when a skill has grown too broad and should be split into focused variants. A skill trying to do too many things has vague triggers, bloated procedures, and mediocre output. Splitting creates specialized variants that route precisely and perform excellently.
 
 # When to use this skill
 Use when:
-- A skill's "When to use" section has grown to cover 6+ different conditions with significantly different procedures for each
-- A skill produces inconsistent output depending on the input type because it is handling too many cases
-- The user says "this skill does too much", "split this skill", or "make focused versions of this skill"
-- A skill's trigger is firing on inputs that need different procedures
+- User says "this skill does too much", "split this skill", "create variants"
+- Skill has multiple disjoint sections ("For Python:" / "For JavaScript:")
+- Skill triggers on unrelated inputs (routing confusion)
+- Procedure has many "if X then Y, else Z" branches
+- Description >2 sentences trying to cover all cases
+- Refinement keeps adding exceptions
 
 Do NOT use when:
-- The skill is doing one thing but doing it poorly (use `skill-refinement`)
-- The skill overlap is with a different skill, not internal (use `skill-catalog-curation`)
-- The difference between cases is minor — shared procedure with minor branching is fine
+- Skill is focused and working well
+- Variations minor (use overlays instead)
+- Problem is just description (use `skill-description-optimizer`)
+- Skill genuinely handles one coherent task
 
 # Operating procedure
-1. **Identify the overload pattern**: Which of these applies?
-   - **Input type overload**: The skill handles inputs that are structurally different (e.g. "code review" for PRs vs. entire codebases)
-   - **Audience overload**: The procedure changes significantly depending on who is asking
-   - **Platform overload**: The steps are different for different platforms/stacks (e.g. Python vs. Rust)
-   - **Scope overload**: The skill addresses both a micro task and a macro task that rarely need to be done together
-2. **Draw the split boundary**: State explicitly: "Variant A handles [condition] and Variant B handles [condition]. They share [shared logic]"
-3. **Extract the shared core**: Identify the steps in the original procedure that apply to ALL variants — this becomes a shared foundation or is duplicated verbatim into each variant
-4. **Write the variant-specific procedure**: For each variant, write only the steps that differ from the shared core. Do not repeat the shared steps — reference them or include them in full depending on whether the variants will be standalone files
-5. **Name the variants**: Use the naming convention `SKILLNAME-QUALIFIER` where QUALIFIER is the discriminating attribute (e.g. `code-review-pr`, `code-review-codebase`)
-6. **Update the original skill**: Either retire it (add a deprecation notice pointing to the variants) or keep it as a dispatcher that routes to the correct variant based on input
-7. **Update the catalog**: Add the new variants to the library index, remove or deprecate the original
+1. **Identify splitting signals**:
+   - Count distinct "modes" (if/else, "For X:" sections)
+   - Count distinct non-overlapping trigger clusters
+   - Does output format vary by case?
+   - Do different contexts need different behaviors?
+2. **Determine split axis**:
+   - **Stack**: skill-testing-python, skill-testing-javascript
+   - **Platform**: skill-deploy-aws, skill-deploy-gcp
+   - **Scope**: skill-review-quick, skill-review-thorough
+   - **Domain**: skill-api-rest, skill-api-graphql
+3. **Define variants**:
+   - Each passes "one sentence" test
+   - Each has distinct, non-overlapping triggers
+   - Each has focused, linear procedure
+4. **Extract shared core**:
+   - What's common across all?
+   - Consider: base with extensions, or fully independent
+5. **Write each variant**:
+   - Name: original-[variant]
+   - Focused description
+   - Simplified procedure
+   - Variant-specific examples
+6. **Update routing**:
+   - Each "Do NOT use when" references siblings
+   - "Do NOT use for GraphQL (use `api-testing-graphql`)"
+7. **Verify coverage**:
+   - All original cases covered
+   - No gaps
+   - No overlaps
+8. **Deprecate original** (if fully replaced)
 
 # Output defaults
-A **Split Decision** statement (why to split and where the boundary is), draft frontmatter for each new variant, and a **Migration Note** explaining how to handle the original skill (retire, keep as dispatcher, or archive).
+```
+## Variant Split: [original]
+
+### Split Axis
+[Stack | Platform | Scope | Domain]: [reasoning]
+
+### Variants
+| Variant | Scope | Triggers |
+|---------|-------|----------|
+| skill-a | [scope] | "phrase 1" |
+| skill-b | [scope] | "phrase 2" |
+
+### Shared Core
+[What's common or "None - independent"]
+
+### Coverage
+- [x] Case 1 → variant A
+- [x] Case 2 → variant B
+- [x] No gaps/overlaps
+
+### Migration
+Original: [deprecate | keep as router | keep for general]
+```
+
+# References
+- Original skill
+- Similar splits in catalog
 
 # Failure handling
-If the split boundary is unclear — the cases feel different but the procedure is identical — do not split. Document the ambiguity and recommend monitoring usage for 10+ more runs before deciding.
+- **Can't find clean axis**: May be unified; don't force split
+- **Variants overlap**: Rethink axis or accept ambiguity
+- **Too many (>5)**: Consider hierarchy or umbrella router
+- **Core larger than variants**: Don't split—redundant

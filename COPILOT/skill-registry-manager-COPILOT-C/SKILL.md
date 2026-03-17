@@ -1,6 +1,6 @@
 ---
 name: skill-registry-manager
-description: "Owns the library catalog, metadata, status, tags, and provenance for all skills in the ecosystem. Once the library gets large, the registry becomes an asset in its own right. Trigger when the task context clearly involves skill registry manager."
+description: "Manages a skill registry: adding new skills, updating metadata, marking deprecations, querying by tag/category, and generating registry reports. Trigger when asked to 'update the skill registry', 'add X to the registry', 'list all skills in category Y', or 'mark skill X as deprecated'. Do NOT use for authoring new skill content — use skill-creator or skill-authoring instead."
 source: created
 license: Apache-2.0
 compatibility:
@@ -11,29 +11,45 @@ metadata:
   priority: P1
   maturity: draft
   risk: low
-  tags: [registry, catalog, metadata]
+  tags: [registry, catalog, metadata, provenance, lifecycle]
 ---
 
 # Purpose
-Owns the library catalog, metadata, status, tags, and provenance for all skills in the ecosystem.
+Maintains the canonical registry of skills in a library: their slugs, categories, maturity states, source provenance, and tags. Acts as the single source of truth for "what skills exist, in what state, and where they came from." Supports skills-lock.json-style manifests and MANIFEST.md-style human-readable catalogs.
 
 # When to use this skill
 Use when:
-- when creating, adapting, refining, installing, testing, or packaging a skill
-- when a task in the "Package Scaffolding Skills" family needs repeatable procedure rather than ad hoc prompting
-- when a plan, ticket, or repo state would benefit from explicit guardrails around skill registry manager
+- Adding a new skill entry to the registry after creation
+- Updating a skill's maturity (draft → stable → deprecated)
+- Querying the registry: "which skills are in category X?", "which skills are marked deprecated?"
+- Generating a registry report or diff (what changed since last release)
+- Reconciling the MANIFEST.md against the actual folder contents
 
 Do NOT use when:
-- The task is unrelated to skill registry manager
-- A simpler direct approach is sufficient without structured procedure
+- Writing or rewriting SKILL.md content — use `skill-creator` or `skill-refinement`
+- Evaluating skill quality — use `skill-evaluation`
+- Installing skills into a client — use `skill-installation`
 
 # Operating procedure
-1. Keep the scope explicit. The name should not hide unrelated responsibilities.
-2. Prefer references, scripts, examples, or evals when skill registry manager would otherwise become a vague checklist.
-3. Decide whether this belongs in the always-generated core, a stack/profile pack, or the optional registry.
+1. **Identify the registry file(s)**: Look for `MANIFEST.md`, `skills-lock.json`, or a `registry/` directory. Establish which is authoritative for the operation.
+2. **For ADD**: Collect slug, category, priority (P0/P1/P2), source URL, license, source_tags (located/created), and initial maturity (`draft`). Append to manifest in alphabetical order within its category.
+3. **For UPDATE**: Find the entry by slug. Update only the specified fields. Preserve all other fields. Record the change reason in a `changelog` field if the format supports it.
+4. **For DEPRECATE**: Set `maturity: deprecated`, add `deprecated_by: REPLACEMENT_SLUG` and `deprecated_at: YYYY-MM-DD`. Do not delete the entry — deprecation is a state, not a removal.
+5. **For QUERY**: Filter the registry by the requested dimension (category, maturity, tag, source). Return a structured list with slug, description, and status.
+6. **For RECONCILE**: Diff the MANIFEST.md slugs against `ls COPILOT/` folder names. Report: entries in manifest but no folder, folders with no manifest entry, maturity mismatches.
+7. **Write back**: Update the registry file(s). If both MANIFEST.md and skills-lock.json exist, update both consistently.
 
 # Output defaults
-Structured markdown artifact(s) committed to the repo or surfaced as a response, with clear next steps or follow-up items listed.
+- **ADD/UPDATE/DEPRECATE**: Confirmation of the change with the updated registry entry shown as a diff
+- **QUERY**: Markdown table with columns: slug, category, maturity, source
+- **RECONCILE**: Two-section report: `Missing folders` and `Unregistered folders`, plus a summary count
+
+# References
+- https://github.com/anthropics/skills (skills ecosystem structure)
+- https://skills.sh/ (public registry format)
+- https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json (lock file format inspiration)
 
 # Failure handling
-If inputs are missing or ambiguous, surface the specific gap as a decision item rather than guessing. If the procedure cannot complete, document partial progress and blockers explicitly.
+- **Registry file not found**: Check for MANIFEST.md, skills-lock.json, registry.yaml, or catalog.json. If none exist, create MANIFEST.md with the standard header and an empty skills table.
+- **Slug collision**: Refuse to add a duplicate slug. Surface both entries for human decision: merge, rename, or deprecate one.
+- **Inconsistency between MANIFEST.md and skills-lock.json**: Report the inconsistency explicitly. Do not auto-resolve — ask which is authoritative.

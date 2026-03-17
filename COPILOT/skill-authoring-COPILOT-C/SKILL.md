@@ -15,37 +15,78 @@ metadata:
 ---
 
 # Purpose
-Creates a new SKILL.md file from scratch that meets quality standards: specific trigger conditions, concrete operating procedures, defined output format, and no boilerplate filler.
+Creates new skills following the Agent Skills format: YAML frontmatter defining routing metadata, plus a markdown body with Purpose, When to use, Operating procedure, Output defaults, and Failure handling. The description field is routing logic—it determines whether the skill fires, not documentation for humans.
 
 # When to use this skill
 Use when:
-- The user says "write a skill for X", "create a new skill", or "author a skill that does Y"
-- A repeated agent task needs to be captured as a reusable skill
-- An existing workflow is being formalised into a structured procedure
-- A repo's agent team needs a new specialisation
+- User says "create a skill for X", "write a skill that...", "I need a skill to handle..."
+- Repeated task pattern needs to be captured as reusable procedure
+- Capability should be packaged for distribution or reuse across projects
+- New agent specialization needed for a repo's agent team
 
 Do NOT use when:
-- An existing skill already covers the domain — improve it instead (use `skill-refinement`)
-- The task is a one-off that should not become a skill
-- The skill domain is too broad to have a single procedure — split first (use `skill-variant-splitting`)
+- Skill exists and needs minor improvement (use `skill-refinement`)
+- Only description/trigger needs fixing (use `skill-description-optimizer` or `skill-trigger-optimization`)
+- User wants a one-off prompt, not reusable skill (use `prompt-crafting`)
+- Skill needs adaptation to different context (use `skill-adaptation`)
 
 # Operating procedure
-1. **Name the skill**: Use a lowercase, hyphenated verb-noun name that states what it does (e.g. `premortem`, `gap-analysis`, `acceptance-criteria-hardening`)
-2. **Write the frontmatter block**: Include name, description (routing-optimised — specific trigger language first), source, license, and metadata tags
-3. **Write the description for routing**: First clause must contain the most discriminating trigger phrase. End with "Trigger when: [specific condition]". This is what the host reads to decide whether to invoke the skill
-4. **Write "When to use" with exact triggers**:
-   - Use when: list 2–4 specific phrases a user would say or specific conditions that apply
-   - Do NOT use when: list 1–3 cases that look similar but should use a different skill (name the alternative)
-5. **Write the operating procedure as numbered steps**: Each step must describe a concrete action, not a vague principle. Steps must be executable by an agent without human interpretation
-6. **Write output defaults**: Specify the exact format, structure, or sections the skill produces. If the output has a named artifact (table, list, document), describe it
-7. **Write failure handling**: For the most common input failure (too vague, missing data, wrong scope), state exactly what to do
-8. **Validate against anti-patterns** (use `skill-anti-patterns` checklist):
-   - No step that says "Keep the scope explicit" or similar meta-commentary
-   - No trigger that says "when the task clearly involves X" — always name specific signals
-   - Output defaults must be concrete, not "structured markdown artifact(s)"
+1. **Define the skill's job in one sentence**: "This skill [verb] when [trigger] and produces [output]." If you can't do this, the scope is wrong
+2. **Choose the name**: Lowercase, hyphens, 2-4 words. Name describes what it does (verb-noun), not when it's used. Examples: `premortem`, `gap-analysis`, `acceptance-criteria-hardening`
+3. **Write the description field** (THIS IS ROUTING LOGIC, NOT DOCUMENTATION):
+   - First phrase = most discriminating signal that distinguishes this from similar skills
+   - Include 2-3 trigger phrases users actually say, in quotes
+   - Mention what it produces
+   - End with "Trigger when: [specific observable condition]"
+   - Keep under 60 words, no marketing language
+4. **Write frontmatter**:
+   ```yaml
+   ---
+   name: skill-name
+   description: "[routing description]"
+   source: [origin URL or "created"]
+   license: Apache-2.0
+   compatibility:
+     clients: [openai-codex, gemini-cli, opencode, github-copilot]
+   metadata:
+     owner: [owner]
+     category: [category]
+     priority: P0|P1|P2
+     maturity: draft|stable|deprecated
+     risk: low|medium|high
+     tags: [relevant, tags]
+   ---
+   ```
+5. **Write Purpose**: 2-3 sentences of substance. What problem? What output? No filler
+6. **Write "When to use"**:
+   - "Use when:" — 4-6 specific trigger phrases or observable conditions
+   - "Do NOT use when:" — 3-4 confusion cases with named alternatives
+7. **Write Operating procedure**: Numbered steps, each starting with verb, each completable and verifiable. No meta-commentary like "Keep scope explicit"
+8. **Write Output defaults**: Exact format with template or schema. Not "structured markdown" — name specific sections
+9. **Write Failure handling**: Name the 2-3 most common failure modes and what to do for each
+10. **Add References section**: Real URLs to authoritative sources
+11. **Validate against anti-patterns** (check `skill-anti-patterns`):
+    - No circular triggers ("when task involves X")
+    - No boilerplate steps
+    - No generic output defaults
 
 # Output defaults
-A complete SKILL.md file with frontmatter, Purpose, When to use (with Do NOT use), Operating procedure (numbered, concrete steps), Output defaults, and Failure handling sections.
+A complete skill folder:
+```
+skill-name/
+├── SKILL.md          # Frontmatter + sections above
+├── scripts/          # Optional automation
+├── references/       # Optional large docs
+└── evals/            # Optional tests
+```
+
+# References
+- https://github.com/anthropics/skills — Anthropic skill implementation
+- https://agentskills.io — Agent Skills specification
+- https://github.com/vercel-labs/agent-skills — Vercel examples
 
 # Failure handling
-If the domain of the skill is unclear or overlaps heavily with an existing skill, name the overlap and ask whether to replace, extend, or split before writing.
+- **Scope too broad**: If skill handles multiple distinct tasks, split into separate skills
+- **Can't write one-sentence definition**: Scope is wrong—narrow until it works
+- **Overlaps existing skill**: Check catalog; either merge or explicitly differentiate in description
+- **No clear trigger phrases**: Ask user what words they'd use when they want this

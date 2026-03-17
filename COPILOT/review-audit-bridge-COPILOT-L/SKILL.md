@@ -15,34 +15,146 @@ metadata:
 ---
 
 # Purpose
-Translate code review, security review, QA, and audit findings into clear blocker logic, follow-up tickets, and acceptance criteria — preventing review comments from becoming unchecked backlog noise.
+Structures code review, security review, QA, and implementation audit passes to produce short, actionable findings rather than vague commentary. Separates signal from noise—only surfaces issues that genuinely matter: bugs, security vulnerabilities, logic errors, architectural violations. Never comments on style, formatting, or trivial matters.
 
 # When to use this skill
 Use when:
-- A PR review has returned comments that need to be triaged and converted to action items
-- A security or QA audit has produced a findings report
-- Review comments need to be classified as blocking vs. non-blocking before merge
-- The user says "turn these review comments into tickets" or "what do I need to fix before merge?"
+- Reviewing a PR before merge
+- Conducting a security audit of new code
+- Running QA on completed implementation
+- Validating that implementation matches specification
 
 Do NOT use when:
-- There are no review findings to process
-- The task is performing the review itself (use code-review agent)
+- Writing new code (that's implementation)
+- Fixing issues (that's implementation after review)
+- The code hasn't been written yet
 
 # Operating procedure
-1. **Ingest findings**: read the review source (PR comments, audit report, QA notes)
-2. **Classify each finding** by severity:
-   - **Blocking**: must be resolved before merge/deploy (bug, security issue, broken contract)
-   - **Non-blocking**: should be resolved but does not block (style, minor refactor, documentation)
-   - **Informational**: no action required (observation, future consideration)
-3. **Validate each finding against the code**: look up the referenced file and line; confirm the finding is accurate before creating a ticket
-4. **For blocking findings**: create a ticket in `tickets/open/` with the finding as acceptance criteria
-5. **For non-blocking findings**: add to a `tickets/open/TECH-DEBT-BATCH.md` (batch, not individual tickets)
-6. **For informational findings**: record in `docs/adr/` or discard after logging
-7. **Update the PR or review thread**: reference the created ticket IDs for each blocking finding
-8. **Emit a triage summary**: `FINDING | SEVERITY | ACTION | TICKET_ID`
+
+## 1. Define review scope
+```markdown
+## Review Scope
+- Type: [code-review | security-audit | qa-validation | spec-compliance]
+- Target: [PR #X | branch | commit range | directory]
+- Focus: [specific areas of concern, if any]
+```
+
+## 2. Apply severity classification
+Only flag issues at these levels:
+
+| Severity | Criteria | Blocks Merge? |
+|----------|----------|---------------|
+| **Critical** | Security vulnerability, data loss risk, crashes | Yes |
+| **Major** | Incorrect behavior, logic errors, broken functionality | Yes |
+| **Minor** | Edge case bugs, performance issues (non-blocking) | No, but track |
+| **Note** | Suggestions, alternatives, questions | No |
+
+**Explicitly ignore:**
+- Formatting (that's linter's job)
+- Naming style (unless misleading)
+- Comment style
+- Import ordering
+- Line length
+
+## 3. Require evidence for every finding
+Each finding must have:
+```markdown
+### Finding: [Short title]
+**Severity:** Major
+**Location:** `src/auth/validate.ts:45-52`
+
+**Issue:**
+[Specific description of what's wrong]
+
+**Evidence:**
+[Code snippet or test case that demonstrates the problem]
+
+**Suggested Fix:**
+[Concrete fix, not vague advice]
+```
+
+Bad finding (reject):
+> "This function could be improved"
+
+Good finding:
+> "validate() returns true for empty strings, bypassing validation. Evidence: `validate("") === true`. Fix: Add `if (!input) return false;` at line 46."
+
+## 4. Triage findings against actual impact
+Before finalizing, verify each finding:
+- [ ] Is this actually a bug, or expected behavior?
+- [ ] Does this affect production code paths?
+- [ ] Is there existing mitigation (other code, tests)?
+- [ ] Would fixing this break something else?
+
+Drop findings that fail triage.
+
+## 5. Produce structured report
+```markdown
+# Review Report: [PR/Branch/Scope]
+Reviewer: [agent-id or human]
+Date: [ISO date]
+
+## Summary
+- Critical: N
+- Major: N
+- Minor: N
+- Notes: N
+- **Verdict:** [APPROVE | REQUEST_CHANGES | NEEDS_DISCUSSION]
+
+## Blocking Issues
+[Only Critical and Major]
+
+### 1. [Title]
+- Severity: Critical
+- Location: [file:line]
+- Issue: [description]
+- Evidence: [proof]
+- Fix: [suggestion]
+
+## Non-Blocking Issues
+[Minor and Notes, for tracking]
+
+## What Looks Good
+[Briefly note well-implemented areas—builds trust]
+```
+
+## 6. Handle disputed findings
+If implementation author contests a finding:
+1. Re-verify evidence
+2. If evidence still holds, escalate to second reviewer
+3. If evidence disproven, drop finding with note
+4. Document resolution either way
+
+## 7. Generate follow-up tickets (if applicable)
+For non-blocking issues that should be tracked:
+```markdown
+## Follow-up Tickets Recommended
+- TKT-XXX: [Minor issue to address later]
+- TKT-YYY: [Tech debt noted during review]
+```
 
 # Output defaults
-Triage summary table + created ticket files for blocking findings. Non-blocking items batched.
+```markdown
+# Review Report
+
+## Verdict: [APPROVE | REQUEST_CHANGES]
+
+## Blocking (N)
+[List of Critical/Major findings]
+
+## Non-Blocking (N)
+[List of Minor/Note findings]
+
+## Follow-up Tickets
+[List of tickets to create]
+```
+
+# References
+- GitHub PR review workflow: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/about-pull-request-reviews
+- Review statuses: Comment (feedback only), Approve (ship it), Request Changes (must fix)
 
 # Failure handling
-If a finding references a file or line that no longer exists (stale review), mark as "stale — verify against current code" and do not create a ticket until re-validated.
+- **No issues found**: Return "APPROVE" with brief note on what was reviewed, not an empty report
+- **Cannot determine if bug**: Flag as "NEEDS_DISCUSSION" with specific question, don't guess
+- **Review scope too large**: Break into focused passes (security, logic, API contract) rather than one giant review
+- **Conflicting reviewer opinions**: Escalate to third reviewer or author for tiebreak

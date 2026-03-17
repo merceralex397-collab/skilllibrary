@@ -15,38 +15,82 @@ metadata:
 ---
 
 # Purpose
-Installs a skill from a source (registry, zip bundle, or local path) into a target project or client, placing files in the correct location and verifying the installation is functional.
+Installs a skill package into local environment or client configuration. Handles extraction, integrity verification, client overlay application, and registration so skill is available for use.
 
 # When to use this skill
 Use when:
-- The user says "install this skill", "add this skill to my project", or "set up this skill in [client]"
-- A skill needs to be added to a repo's local skill library
-- A skill bundle has been downloaded and needs to be unpacked into the correct location
-- An agent team is being set up and its required skills need to be installed
+- User says "install this skill", "add skill from X", "set up skill"
+- Installing from tarball, zip, or registry URL
+- Installing from GitHub: `npx skills add owner/repo`
+- Linking local folder for development
 
 Do NOT use when:
-- The goal is to create a new skill (use `skill-authoring`)
-- The goal is to package a skill for distribution (use `skill-packaging`)
-- The skill is already installed — verify with a listing before re-installing
+- Creating/authoring skill (use `skill-authoring`)
+- Packaging for distribution (use `skill-packaging`)
+- Skill already installed and just needs configuration
+- Uninstalling/removing skill
 
 # Operating procedure
-1. **Identify the source**: Is the skill coming from a local path, a zip bundle, a registry URL, or a GitHub repo? Confirm the source is accessible
-2. **Identify the target location**: Determine the correct installation path for the target client:
-   - GitHub Copilot: `.github/copilot/skills/SKILLNAME/`
-   - OpenCode: `.opencode/skills/SKILLNAME/`
-   - Gemini CLI: check client-specific conventions
-   - Generic: ask user or consult AGENTS.md for the project's skill directory
-3. **Verify the skill bundle integrity** (if installing from a zip or registry):
-   - Unpack to a temp directory
-   - Verify `manifest.json` exists and SKILL.md checksum matches
-   - Confirm compatibility: does the `compatibility.clients` list include the target client?
-4. **Copy skill files to the target location**: Create the skill directory, copy SKILL.md and any subdirectories (`tests/`, `references/`, `overlays/`, `examples/`)
-5. **Register in skills-lock.json** (if the project uses one): Add the skill entry with name, version, source, and install path
-6. **Verify installation**: Confirm SKILL.md is readable at the installed path. If the client has a skill listing command, run it to confirm the skill appears
-7. **Test trigger** (optional but recommended): Run one of the skill's trigger prompts from `tests/triggers.md` if available and confirm the skill fires
+1. **Identify source**:
+   - Local: `./skill-name-1.0.0.tar.gz` or `./skill-folder/`
+   - Registry: `npx skills add skill-name`
+   - GitHub: `npx skills add owner/repo`
+2. **Download/extract**:
+   - Tarball/zip: extract to temp
+   - GitHub: clone or fetch
+   - Local folder: verify SKILL.md exists
+3. **Verify integrity**:
+   - Check manifest.yaml exists
+   - Verify SHA-256 checksum
+   - If mismatch: abort
+4. **Identify target client**:
+   - Detect environment (Copilot, Claude, etc.)
+   - Or use --client flag
+   - Check compatibility list
+5. **Apply client overlay** (if exists):
+   - Find overlays/[client].yaml
+   - Merge into base SKILL.md
+6. **Install to correct location**:
+   - Claude Desktop: `~/.claude/skills/[name]/`
+   - VS Code Copilot: `.vscode/skills/[name]/`
+   - Project-local: `./skills/[name]/`
+7. **Register skill**:
+   - Add to skills index/manifest
+   - Update config files
+8. **Verify installation**:
+   - Folder exists with contents
+   - Skill discoverable by client
+9. **Report success**:
+   - Show location
+   - Show trigger instructions
 
 # Output defaults
-A confirmation that the skill was installed at the correct path, the skills-lock.json entry (if applicable), and a brief **Installation Verification** showing the file is present and correctly structured.
+```
+## Installation Complete
+
+**Skill**: skill-name v1.0.0
+**Location**: ~/.claude/skills/skill-name/
+**Client**: Claude Desktop
+
+### Verification
+- [x] Checksum verified
+- [x] Files extracted
+- [x] Overlay applied
+- [x] Registered
+
+### Usage
+Triggers on: [description]
+Example: "help me with [purpose]"
+```
+
+# References
+- https://skills.sh — Registry
+- https://github.com/anthropics/skills
+- Client skill documentation
 
 # Failure handling
-If the target location is ambiguous or the client's skill convention is unknown, list what needs to be determined (client type, directory convention) before installation can proceed.
+- **Checksum mismatch**: Don't install—"Integrity failed, may be corrupted"
+- **Incompatible client**: Report supported clients, suggest alternative
+- **Already installed**: Ask: overwrite, skip, or version?
+- **Permission denied**: Suggest elevated permissions or alt location
+- **Missing manifest**: Warn unverified source, proceed with caution

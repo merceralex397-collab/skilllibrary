@@ -15,38 +15,90 @@ metadata:
 ---
 
 # Purpose
-Creates a reusable set of test fixtures, trigger prompts, and expected output checks for a skill so it can be evaluated consistently during development and after changes.
+Creates test infrastructure for a skill: trigger tests (positive and negative), output tests (format and content), and baseline comparisons. The harness enables repeatable evaluation during development and refinement.
 
 # When to use this skill
 Use when:
-- The user says "build a test harness for this skill", "create test cases for this skill", or "set up skill tests"
-- A skill is being developed and needs repeatable test cases to verify it works correctly
-- A skill is being modified and regression tests are needed to confirm existing behaviour is preserved
-- A skill evaluation is needed but no test fixtures yet exist (prerequisite for `skill-eval-runner`)
+- User says "create tests for this skill", "set up eval", "build test harness"
+- New skill being created needs test coverage
+- Skill lacks evals/ directory or test fixtures
+- Skill refinement requires regression tests
 
 Do NOT use when:
-- The harness already exists — run it instead (use `skill-eval-runner`)
-- The skill is too early-draft to define expected outputs
-- The skill is being retired
+- Running existing tests (use `skill-eval-runner`)
+- Evaluating quality (use `skill-evaluation`)
+- Benchmarking performance (use `skill-benchmarking`)
+- Tests exist and just need updating (edit directly)
 
 # Operating procedure
-1. **Create a `tests/` directory** inside the skill folder: `SKILLNAME/tests/`
-2. **Write trigger tests** in `tests/triggers.md`:
-   - 5 prompts that SHOULD trigger the skill (positive cases) — use the exact language from the skill's "Use when" section
-   - 3 prompts that should NOT trigger the skill (negative cases) — use the "Do NOT use when" section
-   - For each test: a `prompt:` field and an `expected_trigger:` field (yes/no)
-3. **Write behaviour tests** in `tests/behaviour.md`:
-   - 3 representative prompts with realistic input content
-   - For each: `prompt:`, `input:` (the content the user would provide), and `expected_output_contains:` (a list of specific elements that must appear in the output — section names, key terms, minimum structure)
-4. **Write a baseline comparison** in `tests/baseline.md`:
-   - One representative test prompt
-   - `with_skill_expected:` section describing the quality improvements the skill should produce over the baseline
-   - `baseline_expected:` section describing what the unaided model would typically produce
-5. **Create `tests/README.md`**: List what each test file contains and how to run them with `skill-eval-runner`
-6. **Populate `expected_output_contains` conservatively**: Only require elements that the skill's operating procedure definitively produces, not aspirational outputs
+1. **Analyze skill to test**:
+   - What triggers it? (from description and "When to use")
+   - What should NOT trigger? (from "Do NOT use when")
+   - What output format?
+   - What quality criteria?
+2. **Create trigger tests** (`evals/triggers.yaml`):
+   ```yaml
+   positive_triggers:
+     - input: "exact phrase that should trigger"
+       expected: trigger
+       notes: "core use case"
+     - input: "variation that should also trigger"
+       expected: trigger
+   
+   negative_triggers:
+     - input: "phrase that should NOT trigger"
+       expected: no_trigger
+       better_skill: "skill that should handle this"
+   ```
+3. **Create output tests** (`evals/outputs.yaml`):
+   ```yaml
+   output_tests:
+     - name: "basic case"
+       input: "full prompt"
+       expected_sections:
+         - "## Required Section"
+       required_patterns:
+         - "must contain this"
+       forbidden_patterns:
+         - "should not contain"
+   ```
+4. **Create baseline comparisons** (`evals/baselines.yaml`):
+   ```yaml
+   baseline_comparisons:
+     - name: "typical task"
+       input: "prompt"
+       baseline_context: "without skill"
+       evaluation_criteria:
+         - "correctness"
+         - "completeness"
+   ```
+5. **Create test fixtures** (`evals/fixtures/`):
+   - Sample input files
+   - Mock data if needed
+   - Expected output examples
+6. **Document the harness** (`evals/README.md`):
+   - How to run tests
+   - What each file covers
+   - How to add new tests
 
 # Output defaults
-A `tests/` folder containing: `triggers.md`, `behaviour.md`, `baseline.md`, and `README.md`. Each file in the format described above with all test cases filled in.
+```
+skill-name/
+├── SKILL.md
+└── evals/
+    ├── README.md
+    ├── triggers.yaml
+    ├── outputs.yaml
+    ├── baselines.yaml
+    └── fixtures/
+```
+
+# References
+- https://docs.anthropic.com/en/docs/test-and-evaluate/eval-overview
+- Existing evals/ in similar skills
 
 # Failure handling
-If the skill's operating procedure is too vague to write specific expected outputs, note which steps need to be made more concrete before expected outputs can be defined.
+- **No clear triggers**: Can't write trigger tests—flag for `skill-description-optimizer`
+- **Output format undefined**: Can't write output tests—flag for refinement
+- **No comparable baseline**: Skip baseline tests, focus on absolute quality
+- **Skill too complex**: Break into sub-capabilities, test each

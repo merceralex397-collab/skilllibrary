@@ -15,36 +15,169 @@ metadata:
 ---
 
 # Purpose
-Orient an agent quickly in an unfamiliar codebase — identifying canonical source, generated surfaces, entry points, and key conventions before any editing begins.
+Efficiently orients an agent in an unfamiliar codebase by establishing a reading order and directory taxonomy. Prevents drift caused by agents editing generated files, confusing test fixtures with source code, or missing key configuration files. Builds a mental model of what's canonical vs. derived.
 
 # When to use this skill
 Use when:
-- An agent is starting work in a repo it has not seen before
-- The task is in an unfamiliar subdirectory or service
-- An agent is about to edit a file but is not certain whether it is source or generated
-- The user asks "where is X implemented?", "how is this codebase organized?", or "what is the entry point?"
+- First encountering a new codebase
+- Context-switching to a different project
+- Unsure which files are safe to edit vs. generated
+- Need to find where specific functionality lives
 
 Do NOT use when:
-- The agent already has a loaded map of the repo from earlier in the same session
-- The task is fully self-contained in a single known file
+- Already familiar with the repo's structure
+- Working on a single well-understood file
+- The repo has explicit AGENTS.md with reading order (follow that instead)
 
 # Operating procedure
-1. **Read the top-level README and AGENTS.md** — these are the canonical orientation documents
-2. **Map the directory tree** (max 2 levels deep): identify purpose of each top-level directory
-3. **Classify each directory** as one of: source (human-authored), generated (do not edit directly), operational (tickets, logs, config), or test
-4. **Find entry points**: main function, API router, CLI entrypoint, or equivalent for the stack
-5. **Identify the test pattern**: where tests live, how to run them, what the coverage baseline is
-6. **Check for managed surfaces**: note any files marked as generated (header comment, AGENTS.md listing, or .opencode/ config)
-7. **Record the navigation map** in a compact format before proceeding:
-   ```
-   src/         → source (TypeScript, entry: src/index.ts)
-   generated/   → generated (do not edit)
-   tickets/     → operational
-   tests/       → test (run: npm test)
-   ```
+
+## 1. Quick orientation (30 seconds)
+```bash
+# Get repo basics
+pwd && ls -la
+cat README.md 2>/dev/null | head -50
+cat AGENTS.md 2>/dev/null | head -50
+```
+
+## 2. Identify package/project type
+```bash
+# Check for manifest files
+ls package.json Cargo.toml pyproject.toml go.mod pom.xml *.csproj 2>/dev/null
+```
+
+Map to project type:
+- `package.json` → Node.js/TypeScript
+- `Cargo.toml` → Rust
+- `pyproject.toml` or `setup.py` → Python
+- `go.mod` → Go
+- `pom.xml` → Java/Maven
+
+## 3. Map directory taxonomy
+
+### Canonical (source of truth, safe to edit)
+```
+src/           # Main source code
+lib/           # Library code
+app/           # Application code (frameworks)
+components/    # UI components (React, Vue, etc.)
+```
+
+### Derived (generated, do NOT edit)
+```
+dist/          # Build output
+build/         # Build output
+target/        # Rust/Java build output
+node_modules/  # Dependencies
+.next/         # Next.js build
+__pycache__/   # Python bytecode
+*.generated.*  # Explicitly generated files
+```
+
+### Configuration (edit carefully)
+```
+*.config.js    # Build/tool config
+*.json         # Config files (package.json, tsconfig.json)
+*.yaml/*.yml   # Config files
+.env*          # Environment (never commit secrets)
+```
+
+### Documentation (safe to edit)
+```
+docs/          # Documentation
+README.md      # Project readme
+AGENTS.md      # Agent instructions
+CHANGELOG.md   # Version history
+```
+
+### Tests (safe to edit)
+```
+tests/         # Test files
+__tests__/     # Jest convention
+*.test.ts      # Test files
+*.spec.ts      # Test files
+test/          # Test directory
+```
+
+### Operational (agent infrastructure)
+```
+.opencode/     # Agent config
+.copilot/      # Copilot config
+tickets/       # Task tracking
+.github/       # GitHub config (workflows, templates)
+```
+
+## 4. Build reading order
+For a typical project, read in this order:
+
+1. **What is this?** `README.md`, `AGENTS.md`
+2. **What's the stack?** `package.json`/`Cargo.toml`/etc., `docs/STACK-PROFILE.md`
+3. **How is it structured?** `tree -L 2 -I 'node_modules|dist|target'`
+4. **What's the entry point?** 
+   - Check `main` field in package.json
+   - Look for `src/index.*`, `src/main.*`, `app/page.*`
+5. **What are the key abstractions?**
+   - Look for `types/`, `interfaces/`, `models/`
+   - Check `src/lib/` or `src/core/`
+
+## 5. Verify understanding
+Before making changes, confirm:
+```bash
+# Understand build process
+npm run build --dry-run 2>/dev/null || cargo check 2>/dev/null
+# Understand test process  
+npm test -- --listTests 2>/dev/null || cargo test --no-run 2>/dev/null
+```
+
+## 6. Document findings
+If no AGENTS.md exists, create mental model:
+```markdown
+## Repo Mental Model
+
+### Entry Points
+- Main: src/index.ts
+- CLI: src/cli.ts
+
+### Key Directories
+- Business logic: src/services/
+- Data models: src/models/
+- API routes: src/routes/
+
+### Generated (don't edit)
+- dist/, node_modules/
+
+### Build Commands
+- Install: npm ci
+- Build: npm run build
+- Test: npm test
+```
 
 # Output defaults
-Compact navigation map emitted before starting the actual task. Takes less than 60 seconds; do not deep-read all files.
+Return a structured summary:
+```markdown
+## Navigation Summary
+
+**Project type**: [Node.js/TypeScript]
+**Entry point**: [src/index.ts]
+
+### Directory map
+| Path | Type | Purpose |
+|------|------|---------|
+| src/ | canonical | Main source code |
+| dist/ | derived | Build output |
+| tests/ | canonical | Test files |
+
+### Reading order
+1. README.md
+2. package.json
+3. src/index.ts
+4. src/types/
+```
+
+# References
+- AGENTS.md convention: project-specific agent instructions
+- Common project layouts vary by ecosystem
 
 # Failure handling
-If README is missing or outdated, infer structure from file patterns. If a directory's classification is ambiguous, default to treating it as source (conservative) and flag it for clarification.
+- **No manifest files**: Treat as ad-hoc project. Look for any executable files, Makefile, or shell scripts.
+- **Monorepo detected**: Identify sub-packages (`packages/`, `apps/`, `crates/`), navigate each as a separate repo.
+- **Conflicting structures**: If both `src/` and `lib/` exist with similar content, check imports to determine which is canonical.

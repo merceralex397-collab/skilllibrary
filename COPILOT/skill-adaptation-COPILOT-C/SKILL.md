@@ -15,35 +15,80 @@ metadata:
 ---
 
 # Purpose
-Takes a general-purpose skill and modifies its triggers, procedures, and output format to fit the conventions, stack, and constraints of a specific repo or project without losing the core logic.
+Takes a general-purpose skill and adapts it for a specific context: different tech stack, different organization, different domain, or different conventions. Preserves the core procedure while replacing generic references with context-specific ones.
 
 # When to use this skill
 Use when:
-- The user says "adapt this skill for our project", "customise this skill for X stack", or "make this fit our workflow"
-- A library skill is being installed into a repo that has specific conventions, tools, or naming patterns
-- A general skill's output format conflicts with the repo's documentation or ticket system
-- The base skill's trigger language does not match how this team describes the task
+- User says "adapt this skill for our project", "customize for Python/React/etc.", "make this work for our team"
+- Installing library skill that needs project-specific conventions
+- Porting skill from one stack to another (e.g., React → Vue, npm → pnpm)
+- Skill references tools/APIs/conventions that don't exist in target environment
 
 Do NOT use when:
-- The goal is to fix a broken skill (use `skill-refinement`)
-- The goal is to split a skill into variants (use `skill-variant-splitting`)
-- The skill needs to be rewritten from scratch (use `skill-authoring`)
+- Skill is already project-specific and just needs refinement (use `skill-refinement`)
+- Creating skill from scratch (use `skill-authoring`)
+- Only trigger description needs work (use `skill-description-optimizer`)
+- Skill works fine in current context
 
 # Operating procedure
-1. **Read the base skill in full**: Identify the core procedure (the steps that must not change) versus the presentation layer (format, trigger phrases, output structure, tool references)
-2. **Inventory the target repo context**: What conventions exist? File naming, ticket format, CI tooling, primary language, agent team names. This comes from AGENTS.md, existing skills, and repo structure
-3. **Identify the adaptation surface**: Which parts of the skill need changing?
-   - **Trigger phrases**: Update to match the language this team actually uses
-   - **Tool references**: Replace generic tool names with the repo's actual tools (e.g. "your ticket system" → "Linear", "your CI" → "GitHub Actions")
-   - **Output format**: Adjust to match repo conventions (e.g. ADR format, specific header structure, required fields)
-   - **Scope constraints**: Add or remove steps that are irrelevant or mandatory for this context
-4. **Apply adaptations without corrupting the procedure**: The numbered steps of the operating procedure must remain functionally equivalent. Change language and specifics, not logic
-5. **Update the frontmatter**: Change `source` to reference the original, add the repo or profile name to `metadata`, update tags if needed
-6. **Write a short adaptation note** at the bottom of the skill: "Adapted from [original] for [repo/team]. Changes: [list of what was changed and why]"
-7. **Verify routing still works**: Re-read the description and trigger section. Does it still fire on the right inputs in the new context?
+1. **Read the source skill completely**: Understand the problem it solves, output it produces, and assumptions it encodes
+2. **Identify the target context**:
+   - Stack/language: What technologies?
+   - Conventions: Naming, file structure, coding style?
+   - Tools: What's available? What's forbidden?
+   - Domain: What terminology?
+3. **Catalog adaptation points** (things that MUST change):
+   - Tool/command references (e.g., `npm` → `pnpm`, `pytest` → `unittest`)
+   - File paths and patterns (e.g., `src/components` → `app/ui`)
+   - Naming conventions (e.g., camelCase → snake_case)
+   - Output formats (e.g., Markdown → org-mode)
+   - Domain terminology (e.g., "user" → "customer")
+4. **Identify invariants** (things that must NOT change):
+   - Core procedure logic
+   - Safety constraints
+   - Quality checks
+   - The fundamental problem being solved
+5. **Create adapted version**:
+   - Keep frontmatter structure
+   - Update description if target context affects routing
+   - Replace all adaptation points with target-specific versions
+   - Add context-specific examples if skill uses few-shot
+6. **Validate the adaptation**:
+   - Every tool reference exists in target context
+   - Every file path pattern makes sense
+   - No dangling references to source-context things
+7. **Document what was adapted**: Add Adaptation Note at bottom noting source skill and what changed
 
 # Output defaults
-The adapted SKILL.md with all changes applied, plus an **Adaptation Note** section at the end documenting what changed, what was preserved, and the source skill reference.
+```
+## Adaptation Summary
+
+**Source skill**: [name and location]
+**Target context**: [stack/project/team]
+
+### Changes Made
+| Original | Adapted | Reason |
+|----------|---------|--------|
+| npm install | pnpm add | Project uses pnpm |
+| src/components/ | app/ui/ | Different structure |
+
+### Invariants Preserved
+- [Core logic 1]
+- [Core logic 2]
+
+### Adapted SKILL.md
+[Full content]
+
+### Adaptation Note
+Adapted from [source] for [target]. Changes: [list].
+```
+
+# References
+- Original skill documentation
+- Target project's conventions (AGENTS.md, README, etc.)
 
 # Failure handling
-If the target repo conventions are not documented, list what needs to be known before adaptation can be completed (ticket format, tool names, file conventions).
+- **Source skill poorly documented**: Infer intent from procedure, flag assumptions made
+- **Target context unclear**: Ask: "What stack? What file structure? What tools available?"
+- **Adaptation breaks core logic**: Skill may not be adaptable—recommend creating new skill
+- **Missing equivalent in target**: Flag gap, suggest alternatives or note limitation

@@ -1,6 +1,6 @@
 ---
 name: skill-creator
-description: "Creates new skills from user intent, then iterates through testing and improvement loops. This is explicitly present in your source files and should be part of the library. Trigger when the task context clearly involves skill creator."
+description: "Creates new SKILL.md files from scratch. Use when asked to build a new skill, generate a skill for a domain, or author a skill from a description. Trigger phrases: 'create a skill for X', 'write a skill that does X', 'I need a skill for X'. Do NOT use when adapting or refining an existing skill — use skill-adaptation or skill-refinement instead."
 source: github.com/anthropics/skills
 license: Apache-2.0
 compatibility:
@@ -11,29 +11,45 @@ metadata:
   priority: P0
   maturity: draft
   risk: low
-  tags: [skill-creation, iteration, meta]
+  tags: [skill-creation, authoring, meta, scaffolding]
 ---
 
 # Purpose
-Creates new skills from user intent, then iterates through testing and improvement loops.
+Generates a complete, high-quality SKILL.md from a domain description or user intent. The output skill must meet routing, procedural, and quality standards — not a generic template fill. Follows the Anthropic skills format used in github.com/anthropics/skills.
 
 # When to use this skill
 Use when:
-- when creating, adapting, refining, installing, testing, or packaging a skill
-- when a task in the "Meta Skill Engineering" family needs repeatable procedure rather than ad hoc prompting
-- when a plan, ticket, or repo state would benefit from explicit guardrails around skill creator
+- User says "create a skill for X" or "write a skill that does Y"
+- A gap in the skill library is identified and needs to be filled
+- A new domain-specific workflow needs to be codified as a reusable skill
+- Bootstrapping a skill from a proposal stub or brief description
 
 Do NOT use when:
-- The task is unrelated to skill creator
-- A simpler direct approach is sufficient without structured procedure
+- An existing skill just needs its description fixed — use `skill-description-optimizer`
+- An existing skill needs adapting to a new stack — use `skill-adaptation`
+- An existing skill needs quality improvement — use `skill-refinement`
 
 # Operating procedure
-1. Keep the scope explicit. The name should not hide unrelated responsibilities.
-2. Prefer references, scripts, examples, or evals when skill creator would otherwise become a vague checklist.
-3. Decide whether this belongs in the always-generated core, a stack/profile pack, or the optional registry.
+1. **Clarify domain and scope**: Identify the exact task the skill will perform. Name one thing it does — not a family of things. If scope is ambiguous, ask before writing.
+2. **Research the domain**: Fetch real documentation (official docs, specs, canonical repos) for the domain. Skills without domain knowledge produce generic steps.
+3. **Write the description field first**: This is routing logic. It must include: exact trigger phrases, what the skill does in ≤2 sentences, and explicit DO NOT USE conditions with named alternatives. Test it mentally: would a router select this skill for the right prompts and reject it for the wrong ones?
+4. **Write the operating procedure**: Every step must be a concrete action. No "consider", no "think about". If a step requires a specific tool, command, or pattern, name it explicitly.
+5. **Add a # References section**: Real URLs only. If you couldn't find documentation, note that — don't invent references.
+6. **Set maturity to `draft`**: New skills are always draft until they have passed trigger tests and output review.
+7. **Validate with skill-testing-harness**: Generate at least 3 positive triggers and 2 negative triggers to verify routing.
 
 # Output defaults
-Structured markdown artifact(s) committed to the repo or surfaced as a response, with clear next steps or follow-up items listed.
+A complete SKILL.md with:
+- YAML frontmatter (name, description, source, license, compatibility, metadata)
+- Sections: Purpose, When to use, Operating procedure, Output defaults, References, Failure handling
+- Saved to `SKILLNAME-COPILOT-C/SKILL.md` (use `-C` suffix for created skills)
+
+# References
+- https://github.com/anthropics/skills (canonical skill format and examples)
+- https://skills.sh/ (registry for locating existing skills before creating)
+- https://raw.githubusercontent.com/anthropics/skills/main/skill-creator/SKILL.md (this skill's own upstream)
 
 # Failure handling
-If inputs are missing or ambiguous, surface the specific gap as a decision item rather than guessing. If the procedure cannot complete, document partial progress and blockers explicitly.
+- **Scope too broad**: Split into multiple focused skills. A skill doing 3 things routes poorly and executes worse.
+- **No real docs found**: Write the skill anyway but mark references as "unverified" and set maturity to `experimental`.
+- **Description field routes incorrectly in testing**: Iterate on the description field specifically — don't rewrite the whole skill.

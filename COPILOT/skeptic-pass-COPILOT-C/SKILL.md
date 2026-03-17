@@ -15,36 +15,75 @@ metadata:
 ---
 
 # Purpose
-Reviews a proposal with deliberate scepticism to surface optimism bias, hand-waving, unsupported claims, and wishful thinking before the idea gains too much momentum.
+Reviews a proposal with deliberate skepticism to surface optimism bias, hand-waving, unsupported claims, and wishful thinking before the idea gains momentum. This is the lightweight critical pass for early-stage proposals—less structured than red-teaming, focused on puncturing unfounded confidence rather than systematic attack.
 
 # When to use this skill
 Use when:
-- The user says "be skeptical about this", "poke holes in this idea", or "what am I missing here?"
-- A proposal is in early stages and needs a critical reality check before resources are committed
+- The user says "be skeptical about this", "poke holes", "what am I missing?", "sanity check this", or "devil's advocate"
+- A proposal is in early stages and needs a reality check before resources are committed
 - The author is too close to the idea and needs external challenge
-- A plan is being rubber-stamped and deserves genuine scrutiny
+- A plan is being approved without genuine scrutiny
+- The team seems overly enthusiastic and confirmation bias may be operating
 
 Do NOT use when:
-- The user wants a systematic adversarial attack on a finalised design (use `red-team-challenge`)
+- The user wants systematic adversarial attack on a finalized design (use `red-team-challenge`)
 - The user wants only upside identified (use `steelman`)
-- The idea is mature, detailed, and the user wants structured risk analysis (use `premortem`)
+- The idea is mature and needs structured risk analysis (use `premortem`)
+- The user wants tradeoff comparison (use `tradeoff-analysis`)
 
 # Operating procedure
-1. **Read the proposal assuming every optimistic claim is likely wrong**: This is the operating posture — default to scepticism unless evidence is provided
-2. **Flag unsupported claims**: Any assertion of fact that has no evidence, no cited source, and no logical derivation. Mark each: "This claim is unsupported. What evidence backs it?"
-3. **Identify the strongest version of the proposal**: Before critiquing, state in one sentence what the proposal is trying to achieve and what would need to be true for it to work
-4. **Apply the six sceptic lenses**:
-   - **Timeline**: Is the schedule based on wishful thinking? What is the track record for similar work?
-   - **User behaviour**: Does this assume users will act against their own convenience or habits?
-   - **Technical complexity**: Is the hardest part treated as solved or easy?
-   - **Dependencies**: Does this rely on third parties acting predictably and quickly?
-   - **Incentives**: Are the incentives of all participants actually aligned with the plan's success?
-   - **Second-order effects**: What else changes if this works? Are those effects accounted for?
-5. **Rank the five most sceptic-worthy items**: The claims or assumptions that are most likely to be wrong and most consequential if they are
-6. **End with a verdict**: One of: "Worth pursuing with these caveats", "High risk — needs these specific changes before proceeding", or "Not viable in current form because of [specific reason]"
+1. **Adopt skeptic posture**: Read the proposal assuming every optimistic claim is likely wrong until proven otherwise. This is the operating stance—default to doubt unless evidence is provided.
+
+2. **Flag unsupported claims**: Identify any assertion of fact that has:
+   - No evidence cited
+   - No source referenced
+   - No logical derivation shown
+   
+   For each, note: "This claim is unsupported. What evidence backs it?"
+
+3. **Identify the best version first**: Before critiquing, state in one sentence what the proposal is trying to achieve and what would need to be true for it to succeed. This ensures you're skeptical of the real proposal, not a strawman.
+
+4. **Apply the six skeptic lenses**:
+
+   **Timeline skepticism**: Is the schedule based on wishful thinking? What is the track record for similar work? Double the estimate—does it still make sense?
+
+   **User behavior skepticism**: Does this assume users will change habits, learn new things, or act against their convenience? People rarely do.
+
+   **Technical complexity skepticism**: Is the hardest part treated as solved or easy? Is there a "then a miracle occurs" step in the technical plan?
+
+   **Dependency skepticism**: Does this rely on third parties acting predictably, quickly, or generously? What's their incentive?
+
+   **Incentive alignment skepticism**: Are the incentives of all participants actually aligned with success? Who benefits from this failing?
+
+   **Second-order effects skepticism**: What else changes if this works? Are those effects accounted for? What breaks?
+
+5. **Rank the top five skeptic items**: The claims or assumptions that are:
+   - Most likely to be wrong
+   - Most consequential if they are wrong
+   
+   These are the proposal's soft underbelly.
+
+6. **Deliver a verdict**: One of:
+   - "Worth pursuing with these caveats: [list specific caveats]"
+   - "High risk—needs these changes before proceeding: [list specific changes]"
+   - "Not viable in current form because: [specific reason]"
 
 # Output defaults
-A list of **Unsupported Claims**, a **Six Lenses** review section, a ranked **Top 5 Sceptic Items**, and a one-sentence **Verdict**.
+An **Unsupported Claims** list, each with what evidence would be needed.
+
+A **Six Lenses Review** section with findings from each lens (skip lenses that don't apply).
+
+A **Top 5 Skeptic Items** ranked list—the things most likely to be wrong and most damaging if so.
+
+A one-sentence **Verdict** with clear recommendation.
+
+# References
+- Kahneman, D. (2011). Thinking, Fast and Slow — optimism bias, planning fallacy
+- Tetlock, P. (2015). Superforecasting — calibrated skepticism
+- Feynman, R. "Cargo Cult Science" — distinguishing real evidence from wishful thinking
 
 # Failure handling
-If the proposal is so vague that specific claims cannot be identified, return a list of the three questions that need to be answered before a meaningful sceptic pass can be run.
+If the proposal is so vague that specific claims cannot be identified:
+1. State that meaningful skeptic pass requires concrete claims to examine
+2. Return the three questions that need answers before a skeptic pass can run
+3. Identify which of the six lenses could be applied even with limited information
