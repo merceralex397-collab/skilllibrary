@@ -1,3 +1,0 @@
-This is a library that is currently empty.
-
-Your task is to find as many skills as you can, and fill your folder with them.
